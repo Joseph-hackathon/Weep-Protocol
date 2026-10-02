@@ -9,7 +9,7 @@ Legacy tip management processes are slow, admin-heavy, and lack transparency for
 ```mermaid
 flowchart TD
     subgraph FRONTEND["Merchant Portal"]
-        POLICY[Merchant inputs policy:<br/>"60% to servers, 30% to kitchen..."]
+        POLICY["Merchant inputs policy:<br/>'60% to servers, 30% to kitchen...'"]
         POLICY --> SUBMIT
     end
 
