@@ -105,10 +105,25 @@ cd chainlink-cre
 npm run compile
 ```
 
-## 🔗 Resources & Links
-- [Monad Hackathon Tracks](https://hackathon.monad.xyz/)
-- [Chainlink Developer Hub](https://dev.chain.link/)
-- [Privy Documentation](https://docs.privy.io/)
-- [Nansen Analytics API](https://nansen.ai/)
+## 🔗 Resources & Market Research
+- [Pew Research Center: The State of Tipping in the U.S.](https://www.pewresearch.org/2023/11/09/services-and-industries-where-people-tip/) - Background on the scale and complexity of the US tipping culture.
+- [U.S. Department of Labor: Tip Regulations under the Fair Labor Standards Act (FLSA)](https://www.dol.gov/agencies/whd/flsa/tips) - Context on the strict legal compliance required for manual tip pooling.
+- [National Restaurant Association: State of the Restaurant Industry](https://restaurant.org/research-and-media/research/research-reports/state-of-the-industry/) - Data on employee turnover and administrative burdens in hospitality.
+
+## 🏆 Hackathon Bounty Implementations
+Direct links to the specific code where we implemented the hackathon sponsor tracks:
+
+- **Chainlink CRE:** 
+  [View Implementation ↗](https://github.com/Joseph-hackathon/Weep-Protocol/tree/main/chainlink-cre) 
+  *(WASM workflow definition that parses natural language via Gemini 1.5 and executes on Monad)*
+- **Monad (Smart Contracts):** 
+  [View Implementation ↗](https://github.com/Joseph-hackathon/Weep-Protocol/blob/main/contracts/TipSplitter.sol) 
+  *(The `TipSplitter.sol` contract handling instant tip liquidity and zero-gas Push distribution)*
+- **Privy (Auth & Embedded Wallets):** 
+  [View Implementation ↗](https://github.com/Joseph-hackathon/Weep-Protocol/blob/main/frontend/src/app/providers.tsx) 
+  *(Frictionless onboarding flow and wallet configuration for employees and merchants)*
+- **Nansen (Smart KYC & Analytics):** 
+  [View Implementation ↗](https://github.com/Joseph-hackathon/Weep-Protocol/blob/main/frontend/src/app/api/nansen/route.ts) 
+  *(Backend API intercepting wallet additions to run Sybil-checks and risk labeling via Nansen)*
 
 *Built for the Monad Hackathon*
