@@ -56,26 +56,6 @@ export async function POST(request: Request) {
 
   const policyId = "POL-" + crypto.randomBytes(4).toString('hex').toUpperCase();
   
-  addLog(`[VALIDATE] Validating Canton Network parameters...`);
-  addLog(`[CANTON] Deploying DistributionPolicy Contract (ID: ${policyId})`);
-
-  let cantonResult;
-  try {
-    const { createContract } = await import('@/lib/canton');
-    // In Canton, ratios should be decimals (as string)
-    cantonResult = await createContract("Merchant", "DistributionPolicy", {
-      merchant: "Merchant",
-      agent: "Agent",
-      policyId,
-      fohRatio: (roles.FOH / 100).toString(),
-      bohRatio: (roles.BOH / 100).toString(),
-      barRatio: (roles.BAR / 100).toString(),
-    });
-    addLog(`[CANTON] Success! ContractId: ${cantonResult.contractId}`);
-  } catch (error) {
-    addLog(`[CANTON-ERROR] Failed to deploy to Canton: ${error.message}`);
-  }
-
   // Still save to local DB for the UI list
   const stmt = db.prepare('INSERT INTO policies (id, merchant, roles, eligibility, status) VALUES (?, ?, ?, ?, ?)');
   stmt.run(policyId, "Merchant", JSON.stringify(roles), "employees_on_shift", "Active");
@@ -83,11 +63,6 @@ export async function POST(request: Request) {
   addLog(`[LISTEN] Waiting for TipPool events...`);
 
   let txHash = "0x" + crypto.randomBytes(16).toString('hex');
-  if (cantonResult && cantonResult.contractId) {
-    txHash = cantonResult.contractId.includes(':') 
-      ? cantonResult.contractId.split(':')[0] 
-      : cantonResult.contractId;
-  }
 
   return NextResponse.json({ 
     policyId, 
