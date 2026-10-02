@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-geist-sans), sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+  
+  --color-bg-primary: #000000;
+  --color-bg-secondary: #0E091C;
+  --color-bg-tertiary: #1a1236;
+  
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #DDD7FE;
+  --color-text-tertiary: #a099ca;
+  
+  --color-accent-primary: #6E54FF;
+  --color-accent-hover: #DDD7FE;
+
+  --color-line: #2d1f56;
+  --color-well: #000000;
+  
+  --color-surface-dark: #0E091C;
+  --color-border-primary: #2d1f56;
+}
+
+@layer base {
+  body {
+    @apply bg-bg-primary text-text-primary antialiased;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-bg-secondary border border-line rounded-xl shadow-none;
+  }
+  .glass-button {
+    @apply bg-bg-secondary border border-line hover:bg-bg-tertiary transition-colors duration-150 rounded-lg;
+  }
+  .animate-marquee {
+    animation: marquee 25s linear infinite;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}

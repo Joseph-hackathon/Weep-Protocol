@@ -1,0 +1,1 @@
+const jwt=require('jsonwebtoken');const token=jwt.sign({'https://daml.com/ledger-api':{'ledgerId':'sandbox','applicationId':'weep-app','actAs':['Merchant'],'readAs':['Merchant']}},'secret');fetch('http://172.28.133.92:7575/v1/packages',{headers:{Authorization:'Bearer '+token}}).then(r=>r.json()).then(console.log);

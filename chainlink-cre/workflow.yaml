@@ -1,0 +1,7 @@
+monad-testnet:
+  user-workflow:
+    workflow-name: "weep-ai-policy"
+    deployment-registry: "private"
+    workflow-artifacts:
+      workflow-path: "./main.ts"
+      secrets-path: "./secrets.yaml"
