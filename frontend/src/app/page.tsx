@@ -64,23 +64,65 @@ export default function Home() {
 
       const render = () => {
         frame++;
-        
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        const size = Math.min(canvas.width, canvas.height) * 0.8;
-        const x = (canvas.width - size) / 2;
-        const y = (canvas.height - size) / 2 + Math.sin(frame * 0.02) * 20;
+        // Resolution for the pixel matrix
+        const pixelSize = 10;
+        const cols = Math.floor(canvas.width / pixelSize);
+        const rows = Math.floor(canvas.height / pixelSize);
+        
+        // Use an offscreen canvas to sample the logo at low resolution
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = cols;
+        offCanvas.height = rows;
+        const offCtx = offCanvas.getContext('2d');
+        if (!offCtx) return;
 
-        ctx.globalAlpha = 0.15;
-        ctx.filter = 'blur(10px) contrast(1.2)';
-        ctx.drawImage(img, x, y, size, size);
+        // Size and floating animation for the logo
+        const imgSize = Math.min(cols, rows) * 0.8;
+        const ix = (cols - imgSize) / 2;
+        const iy = (rows - imgSize) / 2 + Math.sin(frame * 0.02) * 3;
+        
+        // Draw logo to offscreen
+        offCtx.drawImage(img, ix, iy, imgSize, imgSize);
+        const imgData = offCtx.getImageData(0, 0, cols, rows).data;
 
-        ctx.globalAlpha = 0.05;
+        // Bayer 4x4 matrix for ordered dithering
+        const bayer = [
+          [ 0,  8,  2, 10],
+          [12,  4, 14,  6],
+          [ 3, 11,  1,  9],
+          [15,  7, 13,  5]
+        ];
+
         ctx.fillStyle = '#6E54FF';
-        for (let i = 0; i < canvas.height; i += 4) {
-          ctx.fillRect(0, i + (frame % 4), canvas.width, 1);
+        
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            const i = (y * cols + x) * 4;
+            const alpha = imgData[i + 3];
+            const r = imgData[i];
+            const g = imgData[i + 1];
+            const b = imgData[i + 2];
+            
+            if (alpha > 10) {
+              // Convert brightness + alpha to a 0-255 value
+              const brightness = (r + g + b) / 3;
+              const intensity = (brightness * (alpha / 255));
+              
+              // Wave motion effect to make it "alive"
+              const wave = Math.sin((x * 0.2) + (y * 0.2) - (frame * 0.05)) * 40;
+              const threshold = (bayer[y % 4][x % 4] / 16) * 255;
+              
+              if (intensity + wave > threshold) {
+                ctx.globalAlpha = 0.6 + (Math.sin(frame * 0.1 + x) * 0.2); // slight flicker
+                // Draw a pixel (square)
+                ctx.fillRect(x * pixelSize + 1, y * pixelSize + 1, pixelSize - 2, pixelSize - 2);
+              }
+            }
+          }
         }
-
+        
         requestAnimationFrame(render);
       };
       render();
