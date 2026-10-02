@@ -1,9 +1,15 @@
-# Weep Protocol
+<div align="center">
+  <img src="./frontend/public/logo.png" alt="Weep Protocol Logo" width="120" />
+  <h1>Weep Protocol</h1>
+  <h3>Restore trust. Automate fairness.</h3>
+  <p><b>Web3 Tip Payroll & Autonomous Policy Distribution on Monad.</b></p>
+</div>
 
-**Web3 Tip Payroll & Autonomous Policy Distribution on Monad.** 
+---
+
 Weep transforms opaque, manual tip pooling into a transparent, frictionless on-chain engine powered by AI, Chainlink CRE, and Monad.
 
-## 🚨 The Problem: The $40B Tipping Crisis
+## The Problem: The $40B Tipping Crisis
 
 The US restaurant and hospitality industry processes over **$40 Billion in tips annually**, yet the infrastructure for distributing this money is fundamentally broken:
 
@@ -12,7 +18,7 @@ The US restaurant and hospitality industry processes over **$40 Billion in tips 
 3. **Legal & Compliance Liabilities:** Strict Department of Labor (DOL) regulations dictate exactly who can share in a tip pool. Manual errors frequently result in costly class-action lawsuits for merchants.
 4. **Slow Payouts:** Workers often have to wait until their bi-weekly paycheck to receive the cash they earned on a busy Friday night.
 
-## 💡 The Solution: Programmable Fairness
+## The Solution: Programmable Fairness
 
 Weep Protocol replaces trust with mathematics and automation. We turn tipping into a seamless Web3 infrastructure layer:
 
@@ -21,7 +27,7 @@ Weep Protocol replaces trust with mathematics and automation. We turn tipping in
 - **Instant Settlement:** The parsed policy is executed on **Monad Testnet**. Customer tips (AUSD) flow directly into a Smart Contract and are instantly distributed to employee wallets via a zero-gas "Push" model.
 - **Frictionless Onboarding:** Employees don't need to know anything about crypto. They log in via **Privy** to view their dashboard, automatically generating a non-custodial wallet in the background. **Nansen Smart KYC** ensures only verified employee wallets are added to the pool, preventing Sybil attacks.
 
-## ⚙️ How it works
+## How it works
 
 ```mermaid
 flowchart TD
@@ -67,7 +73,7 @@ flowchart TD
     style WORKERS fill:#24292e,stroke:#fff,color:#fff
 ```
 
-## 🛠️ Live Services & Integrations
+## Live Services & Integrations
 
 | Component | Description |
 |---|---|
@@ -78,7 +84,7 @@ flowchart TD
 | Analytics & Sybil | Nansen Smart KYC API |
 | AI Parsing | Gemini 1.5 Pro |
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Run the local development server
 
@@ -105,25 +111,25 @@ cd chainlink-cre
 npm run compile
 ```
 
-## 🔗 Resources & Market Research
+## Resources & Market Research
 - [Pew Research Center: The State of Tipping in the U.S.](https://www.pewresearch.org/2023/11/09/services-and-industries-where-people-tip/) - Background on the scale and complexity of the US tipping culture.
 - [U.S. Department of Labor: Tip Regulations under the Fair Labor Standards Act (FLSA)](https://www.dol.gov/agencies/whd/flsa/tips) - Context on the strict legal compliance required for manual tip pooling.
 - [National Restaurant Association: State of the Restaurant Industry](https://restaurant.org/research-and-media/research/research-reports/state-of-the-industry/) - Data on employee turnover and administrative burdens in hospitality.
 
-## 🏆 Hackathon Bounty Implementations
+## Hackathon Bounty Implementations
 Direct links to the specific code where we implemented the hackathon sponsor tracks:
 
 - **Chainlink CRE:** 
-  [View Implementation ↗](https://github.com/Joseph-hackathon/Weep-Protocol/tree/main/chainlink-cre) 
+  [View Implementation](https://github.com/Joseph-hackathon/Weep-Protocol/tree/main/chainlink-cre) 
   *(WASM workflow definition that parses natural language via Gemini 1.5 and executes on Monad)*
 - **Monad (Smart Contracts):** 
-  [View Implementation ↗](https://github.com/Joseph-hackathon/Weep-Protocol/blob/main/contracts/TipSplitter.sol) 
+  [View Implementation](https://github.com/Joseph-hackathon/Weep-Protocol/blob/main/contracts/TipSplitter.sol) 
   *(The `TipSplitter.sol` contract handling instant tip liquidity and zero-gas Push distribution)*
 - **Privy (Auth & Embedded Wallets):** 
-  [View Implementation ↗](https://github.com/Joseph-hackathon/Weep-Protocol/blob/main/frontend/src/app/providers.tsx) 
+  [View Implementation](https://github.com/Joseph-hackathon/Weep-Protocol/blob/main/frontend/src/app/providers.tsx) 
   *(Frictionless onboarding flow and wallet configuration for employees and merchants)*
 - **Nansen (Smart KYC & Analytics):** 
-  [View Implementation ↗](https://github.com/Joseph-hackathon/Weep-Protocol/blob/main/frontend/src/app/api/nansen/route.ts) 
+  [View Implementation](https://github.com/Joseph-hackathon/Weep-Protocol/blob/main/frontend/src/app/api/nansen/route.ts) 
   *(Backend API intercepting wallet additions to run Sybil-checks and risk labeling via Nansen)*
 
 *Built for the Monad Hackathon*
