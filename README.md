@@ -1,10 +1,27 @@
 # Weep Protocol
 
-Web3 Tip Payroll & Autonomous Policy Distribution on Monad. Weep transforms opaque, manual tip pooling into a transparent, frictionless on-chain engine powered by AI, Chainlink CRE, and Monad.
+**Web3 Tip Payroll & Autonomous Policy Distribution on Monad.** 
+Weep transforms opaque, manual tip pooling into a transparent, frictionless on-chain engine powered by AI, Chainlink CRE, and Monad.
 
-Legacy tip management processes are slow, admin-heavy, and lack transparency for workers. Weep solves this by bringing accountability, natural language AI parsing, and instant Web3 payouts directly to the point-of-sale.
+## 🚨 The Problem: The $40B Tipping Crisis
 
-## How it works
+The US restaurant and hospitality industry processes over **$40 Billion in tips annually**, yet the infrastructure for distributing this money is fundamentally broken:
+
+1. **Administrative Nightmare:** Restaurant managers spend countless hours every week manually calculating tip pools across different roles (Front of House, Back of House, Bar). It requires messy spreadsheets and is highly prone to human error.
+2. **Lack of Trust & Transparency:** Employees are entirely in the dark. They have to blindly trust that management calculated their tip share correctly, leading to high turnover and wage theft accusations.
+3. **Legal & Compliance Liabilities:** Strict Department of Labor (DOL) regulations dictate exactly who can share in a tip pool. Manual errors frequently result in costly class-action lawsuits for merchants.
+4. **Slow Payouts:** Workers often have to wait until their bi-weekly paycheck to receive the cash they earned on a busy Friday night.
+
+## 💡 The Solution: Programmable Fairness
+
+Weep Protocol replaces trust with mathematics and automation. We turn tipping into a seamless Web3 infrastructure layer:
+
+- **Natural Language Policies:** Merchants don't need to write code. They simply type their tipping policy in plain English (e.g., *"60% to servers, 30% to kitchen, 10% to the bar"*).
+- **Decentralized AI Oracles:** **Chainlink CRE** securely parses the merchant's natural language using Gemini 1.5 and translates it into an executable JSON payload.
+- **Instant Settlement:** The parsed policy is executed on **Monad Testnet**. Customer tips (AUSD) flow directly into a Smart Contract and are instantly distributed to employee wallets via a zero-gas "Push" model.
+- **Frictionless Onboarding:** Employees don't need to know anything about crypto. They log in via **Privy** to view their dashboard, automatically generating a non-custodial wallet in the background. **Nansen Smart KYC** ensures only verified employee wallets are added to the pool, preventing Sybil attacks.
+
+## ⚙️ How it works
 
 ```mermaid
 flowchart TD
@@ -50,7 +67,7 @@ flowchart TD
     style WORKERS fill:#24292e,stroke:#fff,color:#fff
 ```
 
-## Live Services & Integrations
+## 🛠️ Live Services & Integrations
 
 | Component | Description |
 |---|---|
@@ -61,7 +78,7 @@ flowchart TD
 | Analytics & Sybil | Nansen Smart KYC API |
 | AI Parsing | Gemini 1.5 Pro |
 
-## Quick Start
+## 🚀 Quick Start
 
 ### 1. Run the local development server
 
@@ -74,6 +91,7 @@ npm run dev
 Visit `http://localhost:3000` to view the landing page.
 - `/merchant`: Access the Merchant Portal to input AI tip policies.
 - `/employee`: Access the Employee Dashboard to view distributed AUSD tips via Privy.
+- `/customer`: Access the Customer payment demo.
 
 ### 2. Contract Details
 - **Network:** Monad Testnet
@@ -86,5 +104,11 @@ Navigate to the `chainlink-cre` directory to compile and upload the WASM workflo
 cd chainlink-cre
 npm run compile
 ```
+
+## 🔗 Resources & Links
+- [Monad Hackathon Tracks](https://hackathon.monad.xyz/)
+- [Chainlink Developer Hub](https://dev.chain.link/)
+- [Privy Documentation](https://docs.privy.io/)
+- [Nansen Analytics API](https://nansen.ai/)
 
 *Built for the Monad Hackathon*
