@@ -19,7 +19,7 @@ export const config = createConfig({
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <PrivyProvider
-      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || "demo-app-id"}
+      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || "cmujnrzih03xh0dl9k6itwgws"}
       config={{
         loginMethods: ["wallet", "email", "google", "apple"],
         defaultChain: monadTestnet,
