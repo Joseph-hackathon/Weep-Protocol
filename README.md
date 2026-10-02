@@ -14,29 +14,29 @@ flowchart TD
     end
 
     subgraph CHAINLINK["Chainlink CRE"]
-        LLM[Gemini 1.5 JSON Parser]
+        LLM["Gemini 1.5 JSON Parser"]
         SUBMIT -->|Workflow Trigger| LLM
         LLM -->|Parse ratios: FOH/BOH/BAR| CRE_TX
     end
 
     subgraph SMART_CONTRACT["Monad Testnet"]
-        CRE_TX[Update TipSplitter.sol]
-        TIP_POOL[Customer Tips (AUSD)]
-        DISTRIBUTE[Auto-Distribute (Push)]
+        CRE_TX["Update TipSplitter.sol"]
+        TIP_POOL["Customer Tips (AUSD)"]
+        DISTRIBUTE["Auto-Distribute (Push)"]
         
         CRE_TX --> DISTRIBUTE
         TIP_POOL --> DISTRIBUTE
     end
     
     subgraph NANSEN["Nansen Analytics"]
-        KYC[Smart KYC / Sybil Check]
+        KYC["Smart KYC / Sybil Check"]
         KYC -.->|Validate| DISTRIBUTE
     end
 
     subgraph WORKERS["Employee Dashboard (Privy)"]
-        FOH[FOH Workers]
-        BOH[BOH Workers]
-        BAR[BAR Workers]
+        FOH["FOH Workers"]
+        BOH["BOH Workers"]
+        BAR["BAR Workers"]
         
         DISTRIBUTE --> FOH
         DISTRIBUTE --> BOH
