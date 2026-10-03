@@ -6,7 +6,8 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, Delete } from "lucide-react";
 import { requestConnect, useWallet } from "../wallet-bridge";
 import {
-  AUSD, EXPLORER, FAUCET, SPLITTER, ausdBalance, mintData, monBalance, readPolicy, supportsTeam, toDollars, toUnits, transferData, waitForReceipt,
+  AUSD, EXPLORER, FAUCET, SPLITTER, approveData, ausdAllowance, ausdBalance, mintData, monBalance, readPolicy, readTeam, supportsTeam,
+  tipIndividualData, toDollars, toUnits, transferData, waitForReceipt, type Member,
 } from "../chain";
 
 /**
@@ -19,12 +20,13 @@ import {
  * The page never loads the wallet stack itself (wallet bridge) and reads the chain with plain JSON-RPC.
  */
 type Policy = { foh: number; boh: number; bar: number };
-type Phase = "idle" | "minting" | "confirm" | "sending" | "done";
+type Phase = "idle" | "minting" | "approve" | "confirm" | "sending" | "done";
 const GROUPS = [
   { key: "foh", label: "Floor", photo: "/hero/barista.jpg" }, // front of house
   { key: "boh", label: "Kitchen", photo: "/hero/chefs.jpg" },
   { key: "bar", label: "Bar", photo: "/hero/bartender.jpg" },
 ] as const;
+const PHOTO = [GROUPS[0].photo, GROUPS[1].photo, GROUPS[2].photo]; // a person's face follows their group
 const QUICK = [1, 2, 5];
 const TEST_DOLLARS = 100;
 const EASE = [0.2, 0.8, 0.2, 1] as const;
@@ -66,24 +68,18 @@ export default function TipFlow() {
   const [details, setDetails] = useState(false);
   const [typing, setTyping] = useState(false); // "Custom": type the amount in a field (any device)
   const [intent, setIntent] = useState(false); // pressed Send before signing in: continue once signed in
-  const [target, setTarget] = useState<string>("pool"); // "pool" or employee ID
-  // Tipping a person needs the updated TipSplitter (registerEmployee / tipIndividual). Until it is live on
-  // Monad, only the team pool is offered, so the page never says a tip went somewhere it didn't.
-  const [teamReady, setTeamReady] = useState(false);
-  useEffect(() => { supportsTeam().then(setTeamReady).catch(() => {}); }, []);
-
-  const EMPLOYEES = [
-    { id: "Alice", role: "Floor", photo: "/hero/barista.jpg" },
-    { id: "Charlie", role: "Kitchen", photo: "/hero/chefs.jpg" },
-    { id: "Dave", role: "Bar", photo: "/hero/bartender.jpg" }
-  ];
-  const targetEmployee = EMPLOYEES.find(e => e.id === target);
+  // Tip the team, or one person by name. People are read from the pool on Monad (saved by the venue on the
+  // Merchant page); a pool without a saved team only offers the team, so a tip never goes somewhere unsaid.
+  const [team, setTeam] = useState<Member[]>([]);
+  const [picked, setPicked] = useState<string>("pool"); // "pool" or a person's name
+  const person = team.find((m) => m.name === picked) ?? null;
+  const target = person ? person.name : "pool";
 
   const dollars = Number(entry) || 0;
   const valid = dollars >= 0.01;
   const signingIn = intent && !address;
   const preparing = intent && Boolean(address); // signed in, about to carry on by itself
-  const busy = phase === "minting" || phase === "confirm" || phase === "sending" || signingIn || preparing;
+  const busy = phase === "minting" || phase === "approve" || phase === "confirm" || phase === "sending" || signingIn || preparing;
   const myFunds = funds && funds.of === address ? funds : null;
   const balance = myFunds ? toDollars(myFunds.ausd) : null;
   // Decided before the press, so the button always offers the right next step.
@@ -93,11 +89,14 @@ export default function TipFlow() {
   // Live rule and pool, refreshed while the page is visible.
   useEffect(() => {
     let live = true;
+    let hasTeam = false;
     const read = () => {
       if (document.hidden) return;
       readPolicy().then((p) => live && setPolicy(p)).catch(() => {});
       ausdBalance(SPLITTER).then((b) => live && setPool(toDollars(b))).catch(() => {});
+      if (hasTeam) readTeam().then((t) => live && setTeam(t)).catch(() => {});
     };
+    supportsTeam().then((ok) => { hasTeam = ok; if (ok) readTeam().then((t) => live && setTeam(t)).catch(() => {}); }).catch(() => {});
     read();
     const id = setInterval(read, 15000);
     return () => { live = false; clearInterval(id); };
@@ -160,11 +159,21 @@ export default function TipFlow() {
         if (!(await waitForReceipt(minted))) throw new Error("Couldn't add test dollars. Nothing was sent.");
         f = await refreshFunds(address);
       }
-      setPhase("confirm");
-      
-      // If tipping an individual, we ideally call tipIndividual. For UI demonstration, we still send to SPLITTER.
-      const hash = await wallet.send({ to: AUSD, data: transferData(SPLITTER, toUnits(dollars)) });
-      
+      const units = toUnits(dollars);
+      let hash: string;
+      if (person) {
+        // A direct tip: the pool may move exactly this amount from the customer straight to the person.
+        if ((await ausdAllowance(address, SPLITTER)) < units) {
+          setPhase("approve");
+          const ok = await wallet.send({ to: AUSD, data: approveData(SPLITTER, units) });
+          if (!(await waitForReceipt(ok))) throw new Error("Couldn't approve the tip. Nothing was sent.");
+        }
+        setPhase("confirm");
+        hash = await wallet.send({ to: SPLITTER, data: tipIndividualData(person.name, units) });
+      } else {
+        setPhase("confirm");
+        hash = await wallet.send({ to: AUSD, data: transferData(SPLITTER, units) });
+      }
       setPhase("sending");
       if (!(await waitForReceipt(hash))) throw new Error("The network turned the payment down. Nothing was sent.");
       setTx({ hash, dollars, target });
@@ -216,6 +225,7 @@ export default function TipFlow() {
   const amount = usd(dollars, true);
   const label =
     phase === "minting" ? "Adding test dollars" :
+    phase === "approve" ? "Allow the tip in your wallet" :
     phase === "confirm" ? "Confirm in your wallet" :
     phase === "sending" ? "Sending" :
     signingIn ? "Signing in" :
@@ -224,6 +234,7 @@ export default function TipFlow() {
     !address ? `Sign in to send ${amount}` :
     lowMon ? "Get MON for the network fee" :
     lowAusd ? `Add ${usd(TEST_DOLLARS)} test dollars & send` :
+    person ? `Send ${amount} to ${person.name}` :
     `Send tip · ${amount}`;
   const size = entry.length > 6 ? "s" : entry.length > 4 ? "m" : "l";
 
@@ -235,37 +246,37 @@ export default function TipFlow() {
             {/* Who */}
             <header className="pay-to">
               <span className="pay-faces" aria-hidden>
-                {target === "pool" ? (
-                  GROUPS.map((g) => <span key={g.key} className="pay-face"><Image src={g.photo} alt="" fill sizes="32px" priority /></span>)
+                {person ? (
+                  <span className="pay-face"><Image src={PHOTO[person.group]} alt="" fill sizes="32px" priority /></span>
                 ) : (
-                  <span className="pay-face"><Image src={targetEmployee?.photo || ""} alt="" fill sizes="32px" priority /></span>
+                  GROUPS.map((g) => <span key={g.key} className="pay-face"><Image src={g.photo} alt="" fill sizes="32px" priority /></span>)
                 )}
               </span>
               <span className="pay-to-text">
-                {teamReady ? (
-                  <select className="pay-select" value={target} onChange={(e) => setTarget(e.target.value)}>
-                    <option value="pool">Team tip pool</option>
-                    {EMPLOYEES.map(emp => <option key={emp.id} value={emp.id}>{emp.id} ({emp.role})</option>)}
-                  </select>
-                ) : (
-                  <span className="pay-to-name">Team tip pool</span>
-                )}
+                <span className="pay-to-name">{person ? person.name : "Team tip pool"}</span>
                 <span className="pay-status">
-                  {target === "pool" ? (
-                    <><span className="pay-live" aria-hidden />{pool === null ? "Reading the pool…" : `${usd(pool, true)} waiting to be shared`}</>
-                  ) : (
-                    "100% direct tip"
-                  )}
+                  <span className="pay-live" aria-hidden />
+                  {person ? `${GROUPS[person.group].label} · gets all of it` : pool === null ? "Reading the pool…" : `${usd(pool, true)} waiting to be shared`}
                 </span>
               </span>
-              {target === "pool" && (
+              {!person && (
                 <button type="button" className="pay-details-btn" aria-expanded={details} aria-controls="pay-details" onClick={() => setDetails((d) => !d)}>
                   <span className="pay-details-long">Split details</span><span className="pay-details-short">Details</span>
                 </button>
               )}
             </header>
+            {team.length > 0 && (
+              <div className="pay-people" role="radiogroup" aria-label="Who the tip is for">
+                <button type="button" role="radio" aria-checked={!person} className="pay-person" disabled={busy} onClick={(e) => { setPicked("pool"); e.currentTarget.scrollIntoView({ inline: "nearest", block: "nearest", behavior: reduce ? "auto" : "smooth" }); }}>Everyone</button>
+                {team.map((m) => (
+                  <button key={m.name} type="button" role="radio" aria-checked={person?.name === m.name} className="pay-person" disabled={busy} onClick={(e) => { setPicked(m.name); setDetails(false); e.currentTarget.scrollIntoView({ inline: "nearest", block: "nearest", behavior: reduce ? "auto" : "smooth" }); }}>
+                    <span className="pay-person-face" aria-hidden><Image src={PHOTO[m.group]} alt="" fill sizes="26px" /></span>{m.name}
+                  </button>
+                ))}
+              </div>
+            )}
             <AnimatePresence initial={false}>
-              {details && target === "pool" && (
+              {details && !person && (
                 <motion.div id="pay-details" className="pay-details" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: reduce ? 0 : 0.24, ease: EASE }}>
                   <div className="pay-details-inner">
                     <p>The venue writes this rule in plain words. It&apos;s saved on Monad and applies to every tip until they change it.</p>
@@ -276,7 +287,7 @@ export default function TipFlow() {
             </AnimatePresence>
 
             {/* How much */}
-            <h1 className="sr-only">Leave a tip for the team</h1>
+            <h1 className="sr-only">{person ? `Leave a tip for ${person.name}` : "Leave a tip for the team"}</h1>
             <div className={`pay-amount pay-amount-${size}`} aria-live="polite" aria-label={`Tip amount ${usd(dollars)}`}>
               <span className="pay-currency" aria-hidden>$</span>
               {typing ? (
@@ -316,7 +327,7 @@ export default function TipFlow() {
             </div>
 
             {/* Where it goes: one bar, like a swap route */}
-            {target === "pool" && (
+            {!person && (
               <section className="pay-route" aria-label="Where your tip goes">
                 <div className="pay-route-head">
                   <span>Split</span>
@@ -352,7 +363,7 @@ export default function TipFlow() {
             <button type="button" className={`pay-send${busy ? " is-busy" : ""}`} onClick={primary} disabled={!valid || busy} aria-busy={busy || undefined}>
               <span className="pay-send-progress" aria-hidden />
               <motion.span className="pay-send-fill" aria-hidden initial={false}
-                animate={{ scaleX: phase === "sending" ? 0.92 : phase === "confirm" || phase === "minting" ? 0.35 : preparing ? 0.22 : signingIn ? 0.1 : 0 }}
+                animate={{ scaleX: phase === "sending" ? 0.92 : phase === "confirm" ? 0.5 : phase === "approve" || phase === "minting" ? 0.3 : preparing ? 0.22 : signingIn ? 0.1 : 0 }}
                 transition={{ duration: reduce ? 0 : phase === "sending" ? 2.6 : 0.4, ease: phase === "sending" ? [0.1, 0.6, 0.3, 1] : EASE }} />
               <span className="pay-send-label">
                 <AnimatePresence mode="popLayout" initial={false}>
@@ -373,9 +384,7 @@ export default function TipFlow() {
             </svg>
             <h1 className="pay-done-amount">{usd(tx!.dollars, true)} sent</h1>
             <p className="pay-done-sub">
-              {tx!.target === "pool" 
-                ? "It's in the team's tip pool, shared by the house rule."
-                : `It went 100% directly to ${tx!.target}'s wallet.`}
+              {tx!.target === "pool" ? "It's in the team's tip pool, shared by the house rule." : `All of it went straight to ${tx!.target}'s wallet.`}
             </p>
 
             {tx!.target === "pool" ? (
@@ -390,11 +399,11 @@ export default function TipFlow() {
               </ul>
             ) : (
               <ul className="pay-done-split">
-                  <motion.li initial={{ opacity: 0, y: reduce ? 0 : 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduce ? 0 : 0.35, delay: reduce ? 0 : 0.55, ease: EASE }}>
-                    <span className="pay-done-photo"><Image src={EMPLOYEES.find(e => e.id === tx!.target)?.photo || ""} alt="" fill sizes="48px" /></span>
-                    <span className="pay-done-share">+{usd(tx!.dollars, true)}</span>
-                    <span className="pay-done-label">Direct Tip</span>
-                  </motion.li>
+                <motion.li initial={{ opacity: 0, y: reduce ? 0 : 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduce ? 0 : 0.35, delay: reduce ? 0 : 0.55, ease: EASE }}>
+                  <span className="pay-done-photo"><Image src={PHOTO[team.find((m) => m.name === tx!.target)?.group ?? 0]} alt="" fill sizes="48px" /></span>
+                  <span className="pay-done-share">+{usd(tx!.dollars, true)}</span>
+                  <span className="pay-done-label">{tx!.target}</span>
+                </motion.li>
               </ul>
             )}
 

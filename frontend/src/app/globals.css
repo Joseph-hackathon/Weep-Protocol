@@ -1077,22 +1077,23 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
   .tip-page .pay-bar, .tip-page .pay-balance { display: none; }
 }
 
-.pay-select {
-  background: transparent;
-  color: var(--text-primary);
-  border: none;
-  font-size: 1rem;
-  font-weight: 600;
-  outline: none;
-  cursor: pointer;
-  padding: 0;
-  margin: 0;
-  appearance: none;
+/* Who the tip is for: everyone, or one person by name (read from the pool on Monad). */
+.pay-people { display: flex; gap: var(--space-2); margin-inline: calc(-1 * var(--space-3)); padding: var(--space-1) var(--space-3); overflow-x: auto; scroll-padding-inline: var(--space-3); scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--space-3), #000 calc(100% - var(--space-3)), transparent); mask-image: linear-gradient(90deg, transparent, #000 var(--space-3), #000 calc(100% - var(--space-3)), transparent); }
+.pay-people::-webkit-scrollbar { display: none; }
+.pay-person {
+  position: relative; flex: none; display: inline-flex; align-items: center; gap: var(--space-2); height: 36px; padding: 0 14px; border-radius: var(--radius-full); cursor: pointer;
+  font-size: 13px; font-weight: 600; color: #d4d4d8; background: var(--pay-raised); border: 1px solid var(--pay-line); white-space: nowrap;
+  transition: background-color var(--motion-fast-2) var(--ease-standard), color var(--motion-fast-2) var(--ease-standard), border-color var(--motion-fast-2) var(--ease-standard);
 }
-.pay-select option {
-  background: var(--surface-void-center);
-  color: var(--text-primary);
-}
+.pay-person::before { content: ""; position: absolute; inset: -4px 0; }
+.pay-person:has(.pay-person-face) { padding-left: 4px; }
+.pay-person:hover { border-color: #71717a; color: #fff; }
+.pay-person[aria-checked="true"] { color: var(--pay-ink); background: var(--pay-lime); border-color: var(--pay-lime); }
+.pay-person:focus-visible { outline: 2px solid var(--pay-lime); outline-offset: 2px; }
+.pay-person:disabled { cursor: default; opacity: .6; }
+.pay-person-face { position: relative; width: 26px; height: 26px; border-radius: var(--radius-full); overflow: hidden; flex: none; }
+.pay-person-face img { object-fit: cover; }
 
 /* ── Merchant and Employee: the payment card's language (photo faces, live dot, one big thing, mint) ── */
 .m-page { flex: 1; display: flex; align-items: center; justify-content: center; padding-block: var(--space-6); }
@@ -1176,6 +1177,12 @@ a.m-wallet:hover { text-decoration: underline; text-underline-offset: 3px; }
 .m-link { display: grid; place-items: center; text-decoration: none; }
 .m-text-btn { align-self: center; height: 36px; padding: 0 var(--space-3); border: 0; background: transparent; font-size: 13px; font-weight: 600; color: #a1a1aa; cursor: pointer; }
 .m-text-btn:hover { color: #fff; }
+.m-payout { width: 100%; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-3); background: var(--pay-well); border: 1px solid var(--pay-well-line); text-align: left; }
+.m-payout-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); }
+.m-payout-label { display: inline-flex; align-items: center; gap: var(--space-2); font-size: 13px; color: #a1a1aa; }
+.m-payout-amount { font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.02em; color: #fff; font-variant-numeric: tabular-nums; }
+.m-payout-done { font-size: 13px; line-height: 18px; color: var(--pay-lime); }
+.m-payout-done a { display: inline-flex; align-items: center; gap: 2px; color: inherit; font-weight: 600; text-underline-offset: 3px; }
 
 /* Employee */
 .e-card { gap: var(--space-4); }

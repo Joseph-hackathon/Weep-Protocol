@@ -7,15 +7,16 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { encodeFunctionData, parseAbi } from "viem";
 import { ArrowUp, ArrowUpRight, Check, ChevronLeft, Minus, Plus, X } from "lucide-react";
 import { requestConnect, useWallet } from "../wallet-bridge";
-import { EXPLORER, SPLITTER, readRoles, supportsTeam, waitForReceipt } from "../chain";
+import { EXPLORER, SPLITTER, ausdBalance, readPolicy, readRoles, readTeam, supportsTeam, toDollars, waitForReceipt } from "../chain";
 import { setupMessage } from "../setup-message";
 
 /**
  * Merchant one-prompt setup (co-founder's architecture):
  *   1 Describe — the team, emails, roles and the tip rule, in plain words, in one box
  *   2 Review   — Gemini's reading as a table the merchant can correct before anything is saved
- *   3 Save     — Privy pre-generates a wallet per email; the rule and each person are saved to TipSplitter
- *   4 Live     — the team is ready; customers can tip the team or a person
+ *   3 Save     — Privy pre-generates a wallet per email; the rule and the team are saved to TipSplitter
+ *   4 Live     — the team is ready; customers can tip the team or a person, and the venue pays the pool out
+ * A venue that already saved its team on Monad lands straight on Live.
  * Everything on-chain is signed by the venue's own wallet (owner or agent of the pool).
  */
 type Group = "floor" | "kitchen" | "bar";
@@ -31,8 +32,12 @@ const GROUPS: { key: Group; label: string; pool: keyof Pool }[] = [
 ];
 const abi = parseAbi([
   "function updatePolicy(uint256 _foh, uint256 _boh, uint256 _bar)",
-  "function registerEmployee(string identifier, address wallet)",
+  "function setTeam(string[] names, address[] wallets, uint8[] groups)",
+  "function payoutTeam()",
 ]);
+const GROUP_INDEX: Record<Group, number> = { floor: 0, kitchen: 1, bar: 2 };
+const GROUP_KEYS: Group[] = ["floor", "kitchen", "bar"];
+const usd = (d: number) => `$${d.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const EASE = [0.2, 0.8, 0.2, 1] as const;
 const FACES = ["/hero/barista.jpg", "/hero/chefs.jpg", "/hero/bartender.jpg"];
 const NEXT_GROUP: Record<Group, Group> = { floor: "kitchen", kitchen: "bar", bar: "floor" };
@@ -69,17 +74,46 @@ export default function TeamSetup() {
   const [roles, setRoles] = useState<{ owner: string; agent: string } | null>(null);
   const [teamReady, setTeamReady] = useState<boolean | null>(null);
   const [steps, setSteps] = useState<{ wallets: StepState; rule: StepState; people: StepState }>({ wallets: "idle", rule: "idle", people: "idle" });
-  const [registered, setRegistered] = useState(0);
   const [running, setRunning] = useState(false);
+  const [fromChain, setFromChain] = useState(false); // opened with a team already saved on Monad
+  const [waiting, setWaiting] = useState<number | null>(null); // dollars in the pool, ready to pay out
+  const [payout, setPayout] = useState<{ state: "idle" | "confirm" | "sending" | "done"; hash?: string; dollars?: number; error?: string }>({ state: "idle" });
 
   useEffect(() => {
-    readRoles().then(setRoles).catch(() => {});
-    supportsTeam().then(setTeamReady).catch(() => setTeamReady(false));
+    let live = true;
+    readRoles().then((r) => live && setRoles(r)).catch(() => {});
+    supportsTeam().then(async (ok) => {
+      if (!live) return;
+      setTeamReady(ok);
+      if (!ok) return;
+      const [team, rule] = await Promise.all([readTeam(), readPolicy()]);
+      if (!live || team.length === 0) return;
+      // Already set up: show the saved team (and its pool) instead of an empty form.
+      setStage((s) => (s === "describe" ? "live" : s));
+      setFromChain(true);
+      setPeople(team.map((m) => ({ name: m.name, email: "", group: GROUP_KEYS[m.group], wallet: m.wallet })));
+      setPool(rule);
+      setSteps({ wallets: "done", rule: "done", people: "done" });
+    }).catch(() => live && setTeamReady(false));
+    return () => { live = false; };
   }, []);
+
+  // The pool's balance while the team is live, so the venue can pay it out.
+  useEffect(() => {
+    if (stage !== "live" || !teamReady) return;
+    let live = true;
+    const read = () => { if (!document.hidden) ausdBalance(SPLITTER).then((b) => live && setWaiting(toDollars(b))).catch(() => {}); };
+    read();
+    const id = setInterval(read, 8000);
+    return () => { live = false; clearInterval(id); };
+  }, [stage, teamReady]);
 
   const total = pool.foh + pool.boh + pool.bar;
   const canOwn = Boolean(address && roles && (address === roles.owner || address === roles.agent));
-  const reviewOk = people.length > 0 && total === 100 && people.every((p) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email) && p.name.trim());
+  const emailsOk = people.every((p) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email) && p.name.trim());
+  // Customers tip a person by name, so two people can't share one.
+  const namesOk = new Set(people.map((p) => p.name.trim().toLowerCase())).size === people.length;
+  const reviewOk = people.length > 0 && total === 100 && emailsOk && namesOk;
 
   const read = async () => {
     setError(null);
@@ -130,17 +164,14 @@ export default function TeamSetup() {
         setSteps((s) => ({ ...s, rule: "done" }));
       }
 
-      // 3 · Each person, so customers can tip them by name
+      // 3 · The team, in one confirmation, so customers can tip anyone by name
       if (!teamReady) {
         setSteps((s) => ({ ...s, people: "blocked" }));
       } else {
         setSteps((s) => ({ ...s, people: "working" }));
-        for (let i = registered; i < team.length; i++) {
-          const p = team[i];
-          const hash = await wallet.send({ to: SPLITTER, data: encodeFunctionData({ abi, functionName: "registerEmployee", args: [p.name.trim(), p.wallet as `0x${string}`] }) });
-          if (!(await waitForReceipt(hash))) throw new Error(`Monad turned down ${p.name}. Try again.`);
-          setRegistered(i + 1);
-        }
+        const args = [team.map((p) => p.name.trim()), team.map((p) => p.wallet as `0x${string}`), team.map((p) => GROUP_INDEX[p.group])] as const;
+        const hash = await wallet.send({ to: SPLITTER, data: encodeFunctionData({ abi, functionName: "setTeam", args: [[...args[0]], [...args[1]], [...args[2]]] }) });
+        if (!(await waitForReceipt(hash))) throw new Error("Monad turned the team down. Check every name is different, then try again.");
         setSteps((s) => ({ ...s, people: "done" }));
       }
 
@@ -159,9 +190,26 @@ export default function TeamSetup() {
   };
 
   const restart = () => {
-    setStage("describe"); setPeople([]); setNotes([]); setError(null); setRegistered(0);
+    setStage("describe"); setPeople([]); setNotes([]); setError(null); setFromChain(false); setPayout({ state: "idle" });
     setSteps({ wallets: "idle", rule: "idle", people: "idle" });
   };
+
+  /** Pay everything waiting in the pool to the saved team, by the saved split. */
+  const payOut = async () => {
+    if (!address || !wallet.send) { requestConnect(); return; }
+    const dollars = waiting ?? 0;
+    setPayout({ state: "confirm" });
+    try {
+      const hash = await wallet.send({ to: SPLITTER, data: encodeFunctionData({ abi, functionName: "payoutTeam" }) });
+      setPayout({ state: "sending" });
+      if (!(await waitForReceipt(hash))) throw new Error("Monad turned the payout down. Nothing moved.");
+      setPayout({ state: "done", hash, dollars });
+      ausdBalance(SPLITTER).then((b) => setWaiting(toDollars(b))).catch(() => {});
+    } catch (e) {
+      setPayout({ state: "idle", error: rejected(e) ? "Cancelled in your wallet. Nothing moved." : (e as Error)?.message || "Something went wrong. Nothing moved." });
+    }
+  };
+  const paying = payout.state === "confirm" || payout.state === "sending";
 
   const fade = { initial: { opacity: 0, y: reduce ? 0 : 12 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: reduce ? 0 : -8 }, transition: { duration: reduce ? 0 : 0.26, ease: EASE } };
 
@@ -254,7 +302,7 @@ export default function TeamSetup() {
             </section>
 
             <button type="button" className="pay-send" onClick={() => setStage("save")} disabled={!reviewOk}>
-              <span className="pay-send-label"><span>{reviewOk ? "Save team" : total !== 100 ? "Make the split 100%" : "Everyone needs an email"}</span></span>
+              <span className="pay-send-label"><span>{reviewOk ? "Save team" : people.length === 0 ? "Add someone first" : total !== 100 ? "Make the split 100%" : !emailsOk ? "Everyone needs an email" : "Give everyone a different name"}</span></span>
             </button>
             <p className="m-quiet">Tips to a named person go 100% to them.</p>
           </motion.div>
@@ -270,7 +318,7 @@ export default function TeamSetup() {
                 detail={steps.wallets === "done" ? "Ready" : "One signature"} />
               <Step state={steps.rule} title="The split" detail={steps.rule === "done" ? "Saved on Monad" : "One confirmation"} />
               <Step state={steps.people} title="Names, for direct tips"
-                detail={steps.people === "blocked" ? "After the pool update" : steps.people === "done" ? "Saved on Monad" : registered > 0 ? `${registered} of ${people.length}` : `${people.length} confirmations`} />
+                detail={steps.people === "blocked" ? "After the pool update" : steps.people === "done" ? "Saved on Monad" : "One confirmation"} />
             </ul>
 
             {steps.wallets === "done" && (
@@ -306,9 +354,11 @@ export default function TeamSetup() {
               <motion.circle cx="32" cy="32" r="29" initial={{ pathLength: reduce ? 1 : 0 }} animate={{ pathLength: 1 }} transition={{ duration: reduce ? 0 : 0.5, ease: EASE }} />
               <motion.path d="M20 33 l8 8 l16 -18" initial={{ pathLength: reduce ? 1 : 0 }} animate={{ pathLength: 1 }} transition={{ duration: reduce ? 0 : 0.35, delay: reduce ? 0 : 0.4, ease: EASE }} />
             </svg>
-            <h1 className="pay-done-amount">{steps.people === "done" ? "Your team is live" : "Almost there"}</h1>
+            <h1 className="pay-done-amount">{fromChain ? "Your team" : steps.people === "done" ? "Your team is live" : "Almost there"}</h1>
             <p className="pay-done-sub">
-              {steps.people === "done" ? "Customers can now tip the team or anyone by name." : "Wallets and the split are saved. Names follow once the updated pool is live."}
+              {steps.people === "done"
+                ? `Split ${pool.foh}% · ${pool.boh}% · ${pool.bar}%. Customers can tip the team or anyone by name.`
+                : "Wallets and the split are saved. Names follow once the updated pool is live."}
             </p>
             <ul className="m-wallets">
               {people.map((p, i) => (
@@ -319,8 +369,39 @@ export default function TeamSetup() {
                 </li>
               ))}
             </ul>
+
+            {teamReady && steps.people === "done" && (
+              <section className="m-payout" aria-label="Pay out the pool">
+                <div className="m-payout-head">
+                  <span className="m-payout-label"><span className="pay-live" aria-hidden />Waiting in the pool</span>
+                  <span className="m-payout-amount">{waiting === null ? "…" : usd(waiting)}</span>
+                </div>
+                {payout.state === "done" ? (
+                  <p className="m-payout-done">
+                    Paid {usd(payout.dollars ?? 0)} to the team.{" "}
+                    <a href={`${EXPLORER}/tx/${payout.hash}`} target="_blank" rel="noreferrer">Receipt <ArrowUpRight size={12} aria-hidden /></a>
+                  </p>
+                ) : waiting !== null && waiting > 0 ? (
+                  <>
+                    <button type="button" className={`pay-send${paying ? " is-busy" : ""}`} onClick={payOut}
+                      disabled={paying || (Boolean(address) && (!wallet.onMonad || (roles !== null && !canOwn)))} aria-busy={paying || undefined}>
+                      <span className="pay-send-label"><span>
+                        {payout.state === "confirm" ? <>Confirm in your wallet<span className="pay-ellipsis" aria-hidden /></>
+                          : payout.state === "sending" ? <>Paying out<span className="pay-ellipsis" aria-hidden /></>
+                          : !address ? "Connect to pay out" : `Pay ${usd(waiting)} to the team`}
+                      </span></span>
+                    </button>
+                    {address && roles && !canOwn && <p className="m-warn">Only the pool&apos;s owner can pay out. Connect {short(roles.owner)}.</p>}
+                    {payout.error && <p className="m-error" role="alert">{payout.error}</p>}
+                  </>
+                ) : (
+                  <p className="m-quiet">New team tips gather here until you pay them out.</p>
+                )}
+              </section>
+            )}
+
             <Link href="/customer" className="pay-again m-link">See what customers see</Link>
-            <button type="button" className="m-text-btn" onClick={restart}>Start over</button>
+            <button type="button" className="m-text-btn" onClick={restart}>{fromChain ? "Change the team" : "Start over"}</button>
           </motion.div>
         )}
       </AnimatePresence>
