@@ -11,7 +11,9 @@ export type Setup = {
   notes: string[]; // anything the model couldn't place, said back to the merchant in plain words
 };
 
-const MODEL = "gemini-2.5-flash";
+// Newest first. Google closes older models to new keys (2.5 now answers 404), so a model that's
+// missing, refused or busy hands over to the next one. GEMINI_MODEL can pin a specific one.
+const MODELS = [process.env.GEMINI_MODEL, "gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"].filter(Boolean) as string[];
 const MAX_CHARS = 4000;
 
 const schema: ResponseSchema = {
@@ -58,13 +60,7 @@ export async function POST(req: Request) {
   if (prompt.length > MAX_CHARS) return NextResponse.json({ error: "too-long" }, { status: 400 });
 
   try {
-    const model = new GoogleGenerativeAI(key).getGenerativeModel({
-      model: MODEL,
-      systemInstruction: instructions,
-      generationConfig: { responseMimeType: "application/json", responseSchema: schema, temperature: 0 },
-    });
-    const result = await model.generateContent(prompt);
-    const data = JSON.parse(result.response.text()) as Setup;
+    const data = JSON.parse(await read(key, prompt)) as Setup;
 
     // Tidy and check what came back, so the page never shows something the contract would refuse.
     const employees = (data.employees ?? [])
@@ -78,4 +74,24 @@ export async function POST(req: Request) {
     console.error("setup/parse", e);
     return NextResponse.json({ error: "ai-failed" }, { status: 502 });
   }
+}
+
+/** Ask each model in turn; only "not available to this key" and "busy" move on to the next. */
+async function read(key: string, prompt: string): Promise<string> {
+  let last: unknown;
+  for (const name of MODELS) {
+    try {
+      const model = new GoogleGenerativeAI(key).getGenerativeModel({
+        model: name,
+        systemInstruction: instructions,
+        generationConfig: { responseMimeType: "application/json", responseSchema: schema, temperature: 0 },
+      });
+      return (await model.generateContent(prompt)).response.text();
+    } catch (e) {
+      last = e;
+      const status = (e as { status?: number }).status;
+      if (status !== 404 && status !== 403 && status !== 429 && status !== 503) break;
+    }
+  }
+  throw last;
 }
