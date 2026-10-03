@@ -1039,3 +1039,52 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
 .panel-item:hover svg, .panel-item:focus-visible svg { color: var(--mint); }
 .panel-item.is-danger:hover svg, .panel-item.is-danger:focus-visible svg { color: var(--status-danger); }
 @media (prefers-reduced-motion: reduce) { .acct-status { animation: none; } .btn-connect, .btn-account { transition: none; } }
+
+/* "Get started" stays white, with the faintest lavender in it, and a soft purple glow. */
+.hero-cta.btn-connect { background: #f6f3ff; border-color: #f6f3ff; color: #0b0614; box-shadow: 0 4px 22px rgba(169, 150, 255, .16); }
+.hero-cta.btn-connect:hover:not(:disabled) { background: #fff; box-shadow: 0 0 26px rgba(169, 150, 255, .28); }
+
+/* ── Customer on phones and tablets: a bottom sheet ───────────────────────────────────────────────
+   On touch screens the payment card sits on the bottom edge like a native sheet: full width (centred on
+   tablets), a grab handle, the keypad in thumb reach and the action right above the home indicator.
+   The amount is always typed on Weep's keypad, so the system keyboard never pops up and covers it. */
+@media (pointer: coarse) and (max-width: 1099px) {
+  body:has(.tip-page) .site-footer { display: none; }
+  body:has(.tip-page) .site-main { padding-bottom: 0; }
+  .tip-page { align-items: flex-end; padding: 0; margin-bottom: 0; }
+  .pay { width: min(100%, 560px); }
+  .pay-card {
+    gap: var(--space-3); padding: var(--space-5) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+    border-radius: var(--radius-6) var(--radius-6) 0 0; border-bottom: 0;
+    box-shadow: 0 -24px 60px -24px rgba(0, 0, 0, .85), inset 0 1px 0 rgba(255, 255, 255, .04);
+  }
+  .pay-card::after { content: ""; position: absolute; top: 8px; left: 50%; translate: -50% 0; width: 36px; height: 4px; border-radius: var(--radius-full); background: #3a3150; }
+  .pay-done { padding-top: var(--space-8); }
+  .pay-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin-top: 0; }
+  .pay-quick { display: none; }
+  .pay-key { height: 56px; font-size: 28px; }
+  .pay-amount { font-size: 64px; line-height: 72px; padding-top: 0; }
+  .pay-amount-m { font-size: 52px; } .pay-amount-s { font-size: 42px; }
+  .pay-send { height: 56px; }
+}
+@media (pointer: coarse) and (max-width: 1099px) and (max-height: 800px) {
+  .pay-key { height: 48px; font-size: 26px; }
+  .pay-amount { font-size: 56px; line-height: 64px; }
+  .pay-send { height: 52px; }
+}
+@media (pointer: coarse) and (max-width: 1099px) and (max-height: 700px) {
+  .pay-card { gap: 10px; padding-top: var(--space-4); }
+  .pay-to { padding-bottom: var(--space-2); }
+  .pay-key { height: 42px; font-size: 24px; }
+  .pay-amount { font-size: 48px; line-height: 56px; }
+  .pay-balance { margin-top: -6px; }
+  .pay-route { padding: var(--space-2) var(--space-3); }
+  .pay-bar { margin: 6px 0; }
+  .pay-send { height: 48px; }
+}
+@media (pointer: coarse) and (max-width: 1099px) and (max-height: 600px) {
+  .pay-card { gap: 8px; }
+  .pay-key { height: 38px; font-size: 22px; }
+  .pay-amount { font-size: 42px; line-height: 48px; }
+  .pay-bar, .pay-balance { display: none; }
+}

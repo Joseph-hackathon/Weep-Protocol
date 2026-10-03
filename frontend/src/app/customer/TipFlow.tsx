@@ -103,7 +103,11 @@ export default function TipFlow() {
     return () => { live = false; };
   }, [address]);
 
-  const press = useCallback((k: string) => { setEntry((e) => nextEntry(e, k)); setMessage(null); }, []);
+  const press = useCallback((k: string) => {
+    setEntry((e) => nextEntry(e, k));
+    setMessage(null);
+    try { navigator.vibrate?.(6); } catch {}   // a tiny tap on phones that support it (Android)
+  }, []);
 
   // Desktop: type the amount straight in.
   useEffect(() => {
@@ -259,7 +263,7 @@ export default function TipFlow() {
               )}
             </div>
             <p className="pay-balance">
-              {balance === null ? (address ? "Reading your balance…" : "Tap an amount or enter your own") : (
+              {balance === null ? (address ? "Reading your balance…" : "Enter an amount") : (
                 <>Balance {usd(balance, true)}
                   {balance > 0 && <button type="button" className="pay-max" onClick={() => { setTyping(false); setEntry(String(Math.floor(balance * 100) / 100)); }} disabled={busy}>Max</button>}
                 </>
