@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Providers from "./providers";
+import AccountDock from "./AccountDock";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Weep Protocol - Monad",
-  description: "High-frequency transparent tip distribution network on Monad",
+  title: "Weep",
+  description: "Restore trust. Automate fairness. Tip distribution on Monad.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -24,10 +24,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-bg-primary text-text-primary">
-        <Providers>
-          {children}
-        </Providers>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <AccountDock />
       </body>
     </html>
   );

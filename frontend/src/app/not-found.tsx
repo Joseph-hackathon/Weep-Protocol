@@ -1,12 +1,9 @@
-import type { Viewport } from "next";
+import Link from "next/link";
 import { BrandLink } from "./Brand";
 import SiteFooter from "./SiteFooter";
-import Hero from "./Hero";
 
-// Phone browser bars take the page's colour, and the background runs under the notch.
-export const viewport: Viewport = { themeColor: "#040208", viewportFit: "cover" };
-
-export default function Home() {
+/** Unknown addresses keep the same header and logo, and offer one clear way home (manual §9.5). */
+export default function NotFound() {
   return (
     <>
       <div className="void" aria-hidden>
@@ -22,8 +19,10 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="site-main hero">
-        <Hero />
+      <main className="page nf">
+        <h1 className="nf-title">This page doesn&apos;t exist</h1>
+        <p className="nf-sub">The link may be old or mistyped.</p>
+        <Link href="/" className="btn-connect nf-home">Back to Weep</Link>
       </main>
 
       <SiteFooter />
