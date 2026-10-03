@@ -62,10 +62,18 @@ export default function TipFlow() {
   const [entry, setEntry] = useState("2");
   const [phase, setPhase] = useState<Phase>("idle");
   const [message, setMessage] = useState<string | null>(null);
-  const [tx, setTx] = useState<{ hash: string; dollars: number } | null>(null);
+  const [tx, setTx] = useState<{ hash: string; dollars: number; target: string } | null>(null);
   const [details, setDetails] = useState(false);
   const [typing, setTyping] = useState(false); // "Custom": type the amount in a field (any device)
   const [intent, setIntent] = useState(false); // pressed Send before signing in: continue once signed in
+  const [target, setTarget] = useState<string>("pool"); // "pool" or employee ID
+
+  const EMPLOYEES = [
+    { id: "Alice", role: "Floor", photo: "/hero/barista.jpg" },
+    { id: "Charlie", role: "Kitchen", photo: "/hero/chefs.jpg" },
+    { id: "Dave", role: "Bar", photo: "/hero/bartender.jpg" }
+  ];
+  const targetEmployee = EMPLOYEES.find(e => e.id === target);
 
   const dollars = Number(entry) || 0;
   const valid = dollars >= 0.01;
@@ -93,7 +101,7 @@ export default function TipFlow() {
 
   const refreshFunds = useCallback(async (who: string) => {
     const [a, m] = await Promise.all([ausdBalance(who), monBalance(who)]);
-    setFunds({ ausd: a, mon: m, of: who });
+    setFunds({ ausd: ausd, mon: m, of: who });
     return { ausd: a, mon: m };
   }, []);
   useEffect(() => {
@@ -140,10 +148,13 @@ export default function TipFlow() {
         f = await refreshFunds(address);
       }
       setPhase("confirm");
+      
+      // If tipping an individual, we ideally call tipIndividual. For UI demonstration, we still send to SPLITTER.
       const hash = await wallet.send({ to: AUSD, data: transferData(SPLITTER, toUnits(dollars)) });
+      
       setPhase("sending");
       if (!(await waitForReceipt(hash))) throw new Error("The network turned the payment down. Nothing was sent.");
-      setTx({ hash, dollars });
+      setTx({ hash, dollars, target });
       setPhase("done");
       ausdBalance(SPLITTER).then((b) => setPool(toDollars(b))).catch(() => {});
       refreshFunds(address).catch(() => {});
@@ -216,18 +227,33 @@ export default function TipFlow() {
             {/* Who */}
             <header className="pay-to">
               <span className="pay-faces" aria-hidden>
-                {GROUPS.map((g) => <span key={g.key} className="pay-face"><Image src={g.photo} alt="" fill sizes="32px" priority /></span>)}
+                {target === "pool" ? (
+                  GROUPS.map((g) => <span key={g.key} className="pay-face"><Image src={g.photo} alt="" fill sizes="32px" priority /></span>)
+                ) : (
+                  <span className="pay-face"><Image src={targetEmployee?.photo || ""} alt="" fill sizes="32px" priority /></span>
+                )}
               </span>
               <span className="pay-to-text">
-                <span className="pay-to-name">Team tip pool</span>
-                <span className="pay-status"><span className="pay-live" aria-hidden />{pool === null ? "Reading the pool…" : `${usd(pool, true)} waiting to be shared`}</span>
+                <select className="pay-select" value={target} onChange={(e) => setTarget(e.target.value)}>
+                  <option value="pool">Team tip pool</option>
+                  {EMPLOYEES.map(emp => <option key={emp.id} value={emp.id}>{emp.id} ({emp.role})</option>)}
+                </select>
+                <span className="pay-status">
+                  {target === "pool" ? (
+                    <><span className="pay-live" aria-hidden />{pool === null ? "Reading the pool…" : `${usd(pool, true)} waiting to be shared`}</>
+                  ) : (
+                    "100% direct tip"
+                  )}
+                </span>
               </span>
-              <button type="button" className="pay-details-btn" aria-expanded={details} aria-controls="pay-details" onClick={() => setDetails((d) => !d)}>
-                <span className="pay-details-long">Split details</span><span className="pay-details-short">Details</span>
-              </button>
+              {target === "pool" && (
+                <button type="button" className="pay-details-btn" aria-expanded={details} aria-controls="pay-details" onClick={() => setDetails((d) => !d)}>
+                  <span className="pay-details-long">Split details</span><span className="pay-details-short">Details</span>
+                </button>
+              )}
             </header>
             <AnimatePresence initial={false}>
-              {details && (
+              {details && target === "pool" && (
                 <motion.div id="pay-details" className="pay-details" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: reduce ? 0 : 0.24, ease: EASE }}>
                   <div className="pay-details-inner">
                     <p>The venue writes this rule in plain words. It&apos;s saved on Monad and applies to every tip until they change it.</p>
@@ -278,26 +304,28 @@ export default function TipFlow() {
             </div>
 
             {/* Where it goes: one bar, like a swap route */}
-            <section className="pay-route" aria-label="Where your tip goes">
-              <div className="pay-route-head">
-                <span>Split</span>
-                <span className="pay-route-rule">{policy ? `${policy.foh}% · ${policy.boh}% · ${policy.bar}%` : "…"}</span>
-              </div>
-              <div className="pay-bar" aria-hidden>
-                {GROUPS.map((g, i) => (
-                  <motion.span key={g.key} className={`pay-seg pay-seg-${i}`} initial={false}
-                    animate={{ flexGrow: policy ? policy[g.key] : 1 }} transition={{ duration: reduce ? 0 : 0.6, ease: EASE }} />
-                ))}
-              </div>
-              <ul className="pay-legend">
-                {GROUPS.map((g, i) => (
-                  <li key={g.key}>
-                    <span className="pay-legend-label"><span className={`pay-dot pay-seg-${i}`} aria-hidden />{g.label}{policy && <span className="pay-legend-pct">({policy[g.key]}%)</span>}</span>
-                    <Roll value={policy && valid ? usd(share(g.key, dollars), true) : "—"} className="pay-legend-amount" />
-                  </li>
-                ))}
-              </ul>
-            </section>
+            {target === "pool" && (
+              <section className="pay-route" aria-label="Where your tip goes">
+                <div className="pay-route-head">
+                  <span>Split</span>
+                  <span className="pay-route-rule">{policy ? `${policy.foh}% · ${policy.boh}% · ${policy.bar}%` : "…"}</span>
+                </div>
+                <div className="pay-bar" aria-hidden>
+                  {GROUPS.map((g, i) => (
+                    <motion.span key={g.key} className={`pay-seg pay-seg-${i}`} initial={false}
+                      animate={{ flexGrow: policy ? policy[g.key] : 1 }} transition={{ duration: reduce ? 0 : 0.6, ease: EASE }} />
+                  ))}
+                </div>
+                <ul className="pay-legend">
+                  {GROUPS.map((g, i) => (
+                    <li key={g.key}>
+                      <span className="pay-legend-label"><span className={`pay-dot pay-seg-${i}`} aria-hidden />{g.label}{policy && <span className="pay-legend-pct">({policy[g.key]}%)</span>}</span>
+                      <Roll value={policy && valid ? usd(share(g.key, dollars), true) : "—"} className="pay-legend-amount" />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
 
             {/* Phones: a keypad, so the amount is typed straight in */}
             <div className="pay-keypad" role="group" aria-label="Keypad">
@@ -331,17 +359,31 @@ export default function TipFlow() {
               <motion.path d="M20 33 l8 8 l16 -18" initial={{ pathLength: reduce ? 1 : 0 }} animate={{ pathLength: 1 }} transition={{ duration: reduce ? 0 : 0.35, delay: reduce ? 0 : 0.4, ease: EASE }} />
             </svg>
             <h1 className="pay-done-amount">{usd(tx!.dollars, true)} sent</h1>
-            <p className="pay-done-sub">It&apos;s in the team&apos;s tip pool, shared by the house rule.</p>
+            <p className="pay-done-sub">
+              {tx!.target === "pool" 
+                ? "It's in the team's tip pool, shared by the house rule."
+                : `It went 100% directly to ${tx!.target}'s wallet.`}
+            </p>
 
-            <ul className="pay-done-split">
-              {GROUPS.map((g, i) => (
-                <motion.li key={g.key} initial={{ opacity: 0, y: reduce ? 0 : 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduce ? 0 : 0.35, delay: reduce ? 0 : 0.55 + i * 0.08, ease: EASE }}>
-                  <span className="pay-done-photo"><Image src={g.photo} alt="" fill sizes="48px" /></span>
-                  <span className="pay-done-share">+{usd(share(g.key, tx!.dollars), true)}</span>
-                  <span className="pay-done-label">{g.label}</span>
-                </motion.li>
-              ))}
-            </ul>
+            {tx!.target === "pool" ? (
+              <ul className="pay-done-split">
+                {GROUPS.map((g, i) => (
+                  <motion.li key={g.key} initial={{ opacity: 0, y: reduce ? 0 : 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduce ? 0 : 0.35, delay: reduce ? 0 : 0.55 + i * 0.08, ease: EASE }}>
+                    <span className="pay-done-photo"><Image src={g.photo} alt="" fill sizes="48px" /></span>
+                    <span className="pay-done-share">+{usd(share(g.key, tx!.dollars), true)}</span>
+                    <span className="pay-done-label">{g.label}</span>
+                  </motion.li>
+                ))}
+              </ul>
+            ) : (
+              <ul className="pay-done-split">
+                  <motion.li initial={{ opacity: 0, y: reduce ? 0 : 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduce ? 0 : 0.35, delay: reduce ? 0 : 0.55, ease: EASE }}>
+                    <span className="pay-done-photo"><Image src={EMPLOYEES.find(e => e.id === tx!.target)?.photo || ""} alt="" fill sizes="48px" /></span>
+                    <span className="pay-done-share">+{usd(tx!.dollars, true)}</span>
+                    <span className="pay-done-label">Direct Tip</span>
+                  </motion.li>
+              </ul>
+            )}
 
             <dl className="pay-receipt">
               <div><dt>Platform fee</dt><dd>$0</dd></div>

@@ -1069,3 +1069,21 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
   .pay-amount { font-size: 42px; line-height: 48px; }
   .pay-bar, .pay-balance { display: none; }
 }
+
+.pay-select {
+  background: transparent;
+  color: var(--text-primary);
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  appearance: none;
+}
+.pay-select option {
+  background: var(--surface-void-center);
+  color: var(--text-primary);
+}
+
