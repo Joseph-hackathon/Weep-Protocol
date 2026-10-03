@@ -6,7 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, Delete } from "lucide-react";
 import { requestConnect, useWallet } from "../wallet-bridge";
 import {
-  AUSD, EXPLORER, FAUCET, SPLITTER, ausdBalance, mintData, monBalance, readPolicy, toDollars, toUnits, transferData, waitForReceipt,
+  AUSD, EXPLORER, FAUCET, SPLITTER, ausdBalance, mintData, monBalance, readPolicy, supportsTeam, toDollars, toUnits, transferData, waitForReceipt,
 } from "../chain";
 
 /**
@@ -67,6 +67,10 @@ export default function TipFlow() {
   const [typing, setTyping] = useState(false); // "Custom": type the amount in a field (any device)
   const [intent, setIntent] = useState(false); // pressed Send before signing in: continue once signed in
   const [target, setTarget] = useState<string>("pool"); // "pool" or employee ID
+  // Tipping a person needs the updated TipSplitter (registerEmployee / tipIndividual). Until it is live on
+  // Monad, only the team pool is offered, so the page never says a tip went somewhere it didn't.
+  const [teamReady, setTeamReady] = useState(false);
+  useEffect(() => { supportsTeam().then(setTeamReady).catch(() => {}); }, []);
 
   const EMPLOYEES = [
     { id: "Alice", role: "Floor", photo: "/hero/barista.jpg" },
@@ -111,11 +115,20 @@ export default function TipFlow() {
     return () => { live = false; };
   }, [address]);
 
+  // Every key answers the press the same way on every device: a short mint flash on the key (also when
+  // the matching key is typed on a physical keyboard) and, on phones that allow it, a tiny vibration.
+  const [pressed, setPressed] = useState<{ key: string; n: number } | null>(null);
   const press = useCallback((k: string) => {
     setEntry((e) => nextEntry(e, k));
     setMessage(null);
-    try { navigator.vibrate?.(6); } catch {}   // a tiny tap on phones that support it (Android)
+    setPressed((p) => ({ key: k, n: (p?.n ?? 0) + 1 }));
+    try { navigator.vibrate?.(6); } catch {}
   }, []);
+  useEffect(() => {
+    if (!pressed) return;
+    const id = setTimeout(() => setPressed(null), 160);
+    return () => clearTimeout(id);
+  }, [pressed]);
 
   // Desktop: type the amount straight in.
   useEffect(() => {
@@ -212,11 +225,6 @@ export default function TipFlow() {
     lowMon ? "Get MON for the network fee" :
     lowAusd ? `Add ${usd(TEST_DOLLARS)} test dollars & send` :
     `Send tip · ${amount}`;
-  const note =
-    message ??
-    (lowMon ? "MON pays the network fee. It's free from the Monad faucet." :
-     lowAusd && balance !== null ? `You have ${usd(balance, true)} in test dollars` :
-     "No platform cut · network fee applies · test dollars");
   const size = entry.length > 6 ? "s" : entry.length > 4 ? "m" : "l";
 
   return (
@@ -234,10 +242,14 @@ export default function TipFlow() {
                 )}
               </span>
               <span className="pay-to-text">
-                <select className="pay-select" value={target} onChange={(e) => setTarget(e.target.value)}>
-                  <option value="pool">Team tip pool</option>
-                  {EMPLOYEES.map(emp => <option key={emp.id} value={emp.id}>{emp.id} ({emp.role})</option>)}
-                </select>
+                {teamReady ? (
+                  <select className="pay-select" value={target} onChange={(e) => setTarget(e.target.value)}>
+                    <option value="pool">Team tip pool</option>
+                    {EMPLOYEES.map(emp => <option key={emp.id} value={emp.id}>{emp.id} ({emp.role})</option>)}
+                  </select>
+                ) : (
+                  <span className="pay-to-name">Team tip pool</span>
+                )}
                 <span className="pay-status">
                   {target === "pool" ? (
                     <><span className="pay-live" aria-hidden />{pool === null ? "Reading the pool…" : `${usd(pool, true)} waiting to be shared`}</>
@@ -330,7 +342,7 @@ export default function TipFlow() {
             {/* Phones: a keypad, so the amount is typed straight in */}
             <div className="pay-keypad" role="group" aria-label="Keypad">
               {KEYS.map((k) => (
-                <button key={k} type="button" className="pay-key" disabled={busy} onClick={() => press(k)} aria-label={k === "del" ? "Delete" : k === "." ? "Decimal point" : k}>
+                <button key={k} type="button" className={pressed?.key === k ? "pay-key is-pressed" : "pay-key"} disabled={busy} onClick={() => press(k)} aria-label={k === "del" ? "Delete" : k === "." ? "Decimal point" : k}>
                   {k === "del" ? <Delete size={22} aria-hidden /> : k}
                 </button>
               ))}
@@ -350,7 +362,8 @@ export default function TipFlow() {
                 </AnimatePresence>
               </span>
             </button>
-            <p className="pay-note" role="status">{note}</p>
+            {/* Only speaks up when something needs attention (cancelled, wrong network, an error). */}
+            {message && <p className="pay-note" role="status">{message}</p>}
           </motion.div>
         ) : (
           <motion.div key="done" className="pay-card pay-done" initial={{ opacity: 0, scale: reduce ? 1 : 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: reduce ? 0 : 0.35, ease: EASE }}>

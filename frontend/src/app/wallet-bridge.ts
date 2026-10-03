@@ -13,9 +13,13 @@ export type WalletState = {
   onMonad: boolean;
   /** Asks the connected wallet to send a transaction; resolves with its hash. */
   send: ((tx: Tx) => Promise<`0x${string}`>) | null;
+  /** Asks the connected wallet to sign a plain-text message (proves who is acting); resolves with the signature. */
+  sign: ((message: string) => Promise<`0x${string}`>) | null;
+  /** How they signed in: their email, or their wallet's name. */
+  via: string | null;
 };
 
-const EMPTY: WalletState = { address: null, onMonad: false, send: null };
+const EMPTY: WalletState = { address: null, onMonad: false, send: null, sign: null, via: null };
 let state: WalletState = EMPTY;
 const listeners = new Set<() => void>();
 

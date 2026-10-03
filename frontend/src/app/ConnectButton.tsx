@@ -97,14 +97,18 @@ export default function ConnectButton({ openOnMount = false }: { openOnMount?: b
   // loading this stack itself. The wallet shows its own confirmation; we only pass the transaction on.
   useEffect(() => {
     if (!address) { publishWallet(null); return; }
-    const send = async (tx: Tx) => {
-      const provider = direct ? directProvider() : privyWallet ? ((await privyWallet.getEthereumProvider()) as unknown as Eip1193) : null;
-      if (!provider) throw new Error("Your wallet is still being set up. Try again in a moment.");
-      return (await provider.request({ method: "eth_sendTransaction", params: [{ from: address, to: tx.to, data: tx.data }] })) as `0x${string}`;
+    const provider = async () => {
+      const p = direct ? directProvider() : privyWallet ? ((await privyWallet.getEthereumProvider()) as unknown as Eip1193) : null;
+      if (!p) throw new Error("Your wallet is still being set up. Try again in a moment.");
+      return p;
     };
-    publishWallet({ address: address as `0x${string}`, onMonad: onRightNetwork, send });
+    const send = async (tx: Tx) =>
+      (await (await provider()).request({ method: "eth_sendTransaction", params: [{ from: address, to: tx.to, data: tx.data }] })) as `0x${string}`;
+    const sign = async (message: string) =>
+      (await (await provider()).request({ method: "personal_sign", params: [message, address] })) as `0x${string}`;
+    publishWallet({ address: address as `0x${string}`, onMonad: onRightNetwork, send, sign, via: via ?? null });
     return () => publishWallet(null);
-  }, [address, onRightNetwork, direct, privyWallet]);
+  }, [address, onRightNetwork, direct, privyWallet, via]);
 
   // A new sign-in (not-connected → connected) clears the signed-out flag. Watching transitions, not state,
   // means the brief moment while a sign-out completes can't undo it.
