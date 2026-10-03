@@ -78,7 +78,7 @@ flowchart TD
 | Component | Description |
 |---|---|
 | Frontend | Next.js App Router (Hosted on Vercel) |
-| Smart Contract | `TipSplitter.sol` on Monad Testnet |
+| Smart Contract | `WeepVenues.sol` on Monad Testnet |
 | Auth & Wallets | Privy (Seamless onboarding & Embedded Wallets) |
 | Workflow & Oracle | Chainlink CRE (Decentralized Workflow Automation) |
 | Analytics & Sybil | Nansen Smart KYC API |
@@ -101,7 +101,9 @@ Visit `http://localhost:3000` to view the landing page.
 
 ### 2. Contract Details
 - **Network:** Monad Testnet
-- **Address:** `0x1A245Dc83F286CA5A6833626E813776623f9F336`
+- **WeepVenues:** `0x4026433687A8324198Ef3FC56d09FccC6e672178`: any business opens its own venue (name, team, split rule); tips go straight into the team's wallets in the same transaction.
+- **AUSD (test):** `0xcEF38D455529Dbc2e37654452C288C25e18ADea4`
+- **TipSplitter (first version):** `0x1A245Dc83F286CA5A6833626E813776623f9F336`
 
 ### 3. Deploying Chainlink CRE Workflow
 Navigate to the `chainlink-cre` directory to compile and upload the WASM workflow definition.
@@ -125,8 +127,8 @@ Direct links to the specific code where we implemented the hackathon sponsor tra
   [View Implementation](https://github.com/Joseph-hackathon/Weep-Protocol/tree/main/chainlink-cre) 
   *(WASM workflow definition that parses natural language via Gemini 1.5 and executes on Monad)*
 - **Monad (Smart Contracts):** 
-  [View Implementation](https://github.com/Joseph-hackathon/Weep-Protocol/blob/main/contracts/TipSplitter.sol) 
-  *(The `TipSplitter.sol` contract handling instant tip liquidity and zero-gas Push distribution)*
+  [View Implementation](https://github.com/Joseph-hackathon/Weep-Protocol/blob/main/contracts/contracts/WeepVenues.sol) 
+  *(The `WeepVenues.sol` contract: a venue per business, instant push payouts to every team wallet, tips by name)*
 - **Privy (Auth & Embedded Wallets):** 
   [View Implementation](https://github.com/Joseph-hackathon/Weep-Protocol/blob/main/frontend/src/app/providers.tsx) 
   *(Frictionless onboarding flow and wallet configuration for employees and merchants)*

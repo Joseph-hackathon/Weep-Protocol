@@ -1,22 +1,30 @@
-import { TIP_SPLITTER } from "./setup-message";
+import { decodeFunctionResult, encodeFunctionData, parseAbi, toEventSelector } from "viem";
+import { WEEP } from "./setup-message";
 
 /**
- * Read-only access to Weep on Monad testnet with plain JSON-RPC (no wallet library, ~1 KB), plus the
- * call data for the transactions the customer can make. Addresses: README "Contract Details".
+ * Weep on Monad testnet: reads with plain JSON-RPC, and the call data for every transaction the app sends.
+ * Venues live in one contract (WeepVenues): any business opens its own, and tips go straight into the
+ * team's wallets in the same transaction.
  */
 export const RPC = process.env.NEXT_PUBLIC_MONAD_RPC || "https://testnet-rpc.monad.xyz";
 export const EXPLORER = "https://testnet.monadexplorer.com";
 export const FAUCET = "https://faucet.monad.xyz";
-/** TipSplitter (the team's tip pool); a redeployed pool is set with NEXT_PUBLIC_TIP_SPLITTER. */
-export const SPLITTER = TIP_SPLITTER;
-/** Agora USD (test), 18 decimals; set NEXT_PUBLIC_AUSD if a new pool uses a new token. */
+export { WEEP };
+/** Agora USD (test), 18 decimals; set NEXT_PUBLIC_AUSD if the venues contract uses a new token. */
 export const AUSD = (process.env.NEXT_PUBLIC_AUSD || "0xcEF38D455529Dbc2e37654452C288C25e18ADea4") as `0x${string}`;
 
-const SEL = {
-  currentPolicy: "0xc7d29856", balanceOf: "0x70a08231", transfer: "0xa9059cbb", mint: "0x40c10f19",
-  owner: "0x8da5cb5b", agent: "0xf5ff5c76", getTeam: "0x8bce6edd", approve: "0x095ea7b3", allowance: "0xdd62ed3e",
-  tipIndividual: "0xefb301a4",
-};
+const abi = parseAbi([
+  "struct Member { string name; address wallet; uint8 group; }",
+  "function venueCount() view returns (uint256)",
+  "function getVenue(uint256 venueId) view returns (string name, address admin, uint8[3] split, uint256 tipped, Member[] team)",
+  "function venuesOf(address admin) view returns (uint256[])",
+  "function createVenue(string name, uint8[3] split, string[] names, address[] wallets, uint8[] groups) returns (uint256)",
+  "function updateVenue(uint256 venueId, string name, uint8[3] split, string[] names, address[] wallets, uint8[] groups)",
+  "function tipTeam(uint256 venueId, uint256 amount)",
+  "function tipPerson(uint256 venueId, string name, uint256 amount)",
+]);
+const VENUE_CREATED = toEventSelector("VenueCreated(uint256,address,string)");
+const SEL = { balanceOf: "0x70a08231", allowance: "0xdd62ed3e", approve: "0x095ea7b3", mint: "0x40c10f19" };
 const word = (hex: string) => hex.replace(/^0x/, "").padStart(64, "0");
 
 async function rpc<T>(method: string, params: unknown[]): Promise<T> {
@@ -25,52 +33,47 @@ async function rpc<T>(method: string, params: unknown[]): Promise<T> {
   if (json.error) throw new Error(json.error.message);
   return json.result as T;
 }
-const call = (to: string, data: string) => rpc<string>("eth_call", [{ to, data }, "latest"]);
+const call = (to: string, data: string) => rpc<`0x${string}`>("eth_call", [{ to, data }, "latest"]);
 
-/** The live split rule (percentages): front of house, back of house (kitchen), bar. */
-export async function readPolicy() {
-  const r = (await call(SPLITTER, SEL.currentPolicy)).slice(2);
-  const n = (i: number) => Number(BigInt("0x" + r.slice(i * 64, i * 64 + 64)));
-  return { foh: n(0), boh: n(1), bar: n(2) };
+export type Group = 0 | 1 | 2; // 0 floor, 1 kitchen, 2 bar
+export type Member = { name: string; wallet: string; group: Group };
+export type Split = { foh: number; boh: number; bar: number };
+export type Venue = { id: number; name: string; admin: string; split: Split; tipped: number; team: Member[] };
+
+export async function venueCount() {
+  return Number(decodeFunctionResult({ abi, functionName: "venueCount", data: await call(WEEP, encodeFunctionData({ abi, functionName: "venueCount" })) }));
 }
+export async function readVenue(id: number): Promise<Venue> {
+  const data = await call(WEEP, encodeFunctionData({ abi, functionName: "getVenue", args: [BigInt(id)] }));
+  const [name, admin, split, tipped, team] = decodeFunctionResult({ abi, functionName: "getVenue", data });
+  return {
+    id, name, admin: admin.toLowerCase(),
+    split: { foh: split[0], boh: split[1], bar: split[2] },
+    tipped: toDollars(tipped),
+    team: team.map((m) => ({ name: m.name, wallet: m.wallet, group: m.group as Group })),
+  };
+}
+/** Every venue, newest first: a public directory, so a customer without a link can still find theirs. */
+export async function listVenues(): Promise<Venue[]> {
+  const n = await venueCount();
+  return Promise.all(Array.from({ length: n }, (_, i) => readVenue(n - 1 - i)));
+}
+/** The venues this wallet runs now, newest first. */
+export async function myVenues(admin: string): Promise<Venue[]> {
+  const data = await call(WEEP, encodeFunctionData({ abi, functionName: "venuesOf", args: [admin as `0x${string}`] }));
+  const ids = [...new Set(decodeFunctionResult({ abi, functionName: "venuesOf", data }).map(Number))];
+  const all = await Promise.all(ids.map(readVenue));
+  return all.filter((v) => v.admin === admin.toLowerCase()).reverse();
+}
+
 export async function ausdBalance(owner: string) {
   return BigInt(await call(AUSD, SEL.balanceOf + word(owner)));
 }
-export async function monBalance(owner: string) {
-  return BigInt(await rpc<string>("eth_getBalance", [owner, "latest"]));
-}
-
-/** Who runs the pool: only the owner or the agent may change the rule or register the team. */
-export async function readRoles() {
-  const [o, a] = await Promise.all([call(SPLITTER, SEL.owner), call(SPLITTER, SEL.agent)]);
-  const addr = (r: string) => ("0x" + r.slice(-40)).toLowerCase();
-  return { owner: addr(o), agent: addr(a) };
-}
-/** Whether the deployed pool keeps the team on-chain (getTeam / setTeam / tipIndividual / payoutTeam). */
-export async function supportsTeam() {
-  const code = await rpc<string>("eth_getCode", [SPLITTER, "latest"]);
-  return code.toLowerCase().includes(SEL.getTeam.slice(2));
-}
-
-export type Member = { name: string; wallet: string; group: 0 | 1 | 2 }; // 0 floor, 1 kitchen, 2 bar
-/** The saved team, read in one call (the public RPC caps log queries at 100 blocks, so no event scans). */
-export async function readTeam(): Promise<Member[]> {
-  const r = (await call(SPLITTER, SEL.getTeam)).slice(2);
-  const at = (byte: number) => Number(BigInt("0x" + r.slice(byte * 2, byte * 2 + 64)));
-  const list = at(0);               // offset of the array
-  const n = at(list);
-  const heads = list + 32;          // each element is a dynamic tuple: its offset is relative to here
-  return Array.from({ length: n }, (_, i) => {
-    const t = heads + at(heads + i * 32);
-    const s = t + at(t);
-    const len = at(s);
-    const hex = r.slice((s + 32) * 2, (s + 32 + len) * 2);
-    const bytes = new Uint8Array(hex.match(/../g)?.map((h) => parseInt(h, 16)) ?? []);
-    return { name: new TextDecoder().decode(bytes), wallet: "0x" + r.slice((t + 32) * 2 + 24, (t + 64) * 2), group: at(t + 64) as 0 | 1 | 2 };
-  });
-}
 export async function ausdAllowance(owner: string, spender: string) {
   return BigInt(await call(AUSD, SEL.allowance + word(owner) + word(spender)));
+}
+export async function monBalance(owner: string) {
+  return BigInt(await rpc<string>("eth_getBalance", [owner, "latest"]));
 }
 
 /** Dollars (2 decimals) ⇄ AUSD base units (18 decimals). */
@@ -79,15 +82,41 @@ const BASIS = BigInt(10) ** BigInt(14);      // 1/10,000 of a dollar
 export const toUnits = (dollars: number) => BigInt(Math.round(dollars * 100)) * CENT;
 export const toDollars = (units: bigint) => Number(units / BASIS) / 10000;
 
-export const transferData = (to: string, units: bigint) => (SEL.transfer + word(to) + word(units.toString(16))) as `0x${string}`;
 export const approveData = (spender: string, units: bigint) => (SEL.approve + word(spender) + word(units.toString(16))) as `0x${string}`;
-/** tipIndividual(string name, uint256 amount): the tip goes straight from the customer to that person. */
-export function tipIndividualData(name: string, units: bigint) {
-  const bytes = Array.from(new TextEncoder().encode(name), (b) => b.toString(16).padStart(2, "0")).join("");
-  const padded = bytes.padEnd(Math.ceil(bytes.length / 64) * 64, "0");
-  return (SEL.tipIndividual + word("40") + word(units.toString(16)) + word((bytes.length / 2).toString(16)) + padded) as `0x${string}`;
-}
 export const mintData = (to: string, units: bigint) => (SEL.mint + word(to) + word(units.toString(16))) as `0x${string}`;
+export const tipTeamData = (venueId: number, units: bigint) => encodeFunctionData({ abi, functionName: "tipTeam", args: [BigInt(venueId), units] });
+export const tipPersonData = (venueId: number, name: string, units: bigint) =>
+  encodeFunctionData({ abi, functionName: "tipPerson", args: [BigInt(venueId), name, units] });
+
+type Setup = { name: string; split: Split; team: Member[] };
+const venueArgs = ({ name, split, team }: Setup) =>
+  [name, [split.foh, split.boh, split.bar], team.map((m) => m.name), team.map((m) => m.wallet as `0x${string}`), team.map((m) => m.group)] as const;
+export const createVenueData = (s: Setup) => encodeFunctionData({ abi, functionName: "createVenue", args: venueArgs(s) });
+export const updateVenueData = (id: number, s: Setup) => encodeFunctionData({ abi, functionName: "updateVenue", args: [BigInt(id), ...venueArgs(s)] });
+
+/**
+ * Each group's share of a team tip in whole cents, as the contract pays it: a group with nobody in it hands
+ * its share to the others, and largest-remainder rounding keeps the parts summing to the tip exactly.
+ */
+export function teamShares(split: Split, team: Member[], dollars: number): Split {
+  const counts = [0, 0, 0];
+  team.forEach((m) => counts[m.group]++);
+  const pct = [split.foh, split.boh, split.bar].map((p, g) => (team.length === 0 || counts[g] > 0 ? p : 0));
+  const active = pct.reduce((a, b) => a + b, 0) || 1;
+  const cents = Math.round(dollars * 100);
+  const exact = pct.map((p) => (cents * p) / active);
+  const base = exact.map(Math.floor);
+  let left = cents - base.reduce((a, b) => a + b, 0);
+  exact.map((x, g) => ({ g, r: x - base[g] })).sort((a, b) => b.r - a.r).forEach(({ g }) => { if (left > 0 && pct[g] > 0) { base[g]++; left--; } });
+  return { foh: base[0] / 100, boh: base[1] / 100, bar: base[2] / 100 };
+}
+
+/** The venue a confirmed createVenue made, read from its receipt. */
+export async function createdVenueId(hash: string): Promise<number | null> {
+  const r = await rpc<{ logs: { address: string; topics: string[] }[] } | null>("eth_getTransactionReceipt", [hash]);
+  const log = r?.logs.find((l) => l.address.toLowerCase() === WEEP.toLowerCase() && l.topics[0] === VENUE_CREATED);
+  return log ? Number(BigInt(log.topics[1])) : null;
+}
 
 /** Wait until a transaction is included; resolves true on success, false on revert. */
 export async function waitForReceipt(hash: string, timeoutMs = 90000) {
