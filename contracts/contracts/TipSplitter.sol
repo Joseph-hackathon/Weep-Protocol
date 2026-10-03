@@ -26,12 +26,21 @@ contract TipSplitter is Ownable {
     // --- Dynamic Employee Registry ---
     mapping(string => address) public employeeWallets;
 
+    // The team as a list, so any app can read it in one call (public RPCs cap log queries).
+    struct Member {
+        string name;
+        address wallet;
+        uint8 group; // 0 floor (front of house), 1 kitchen (back of house), 2 bar
+    }
+    Member[] private team;
+
     // Events formatted specifically for Nansen tracking & Analytics
     event TipDistributed(uint256 totalAmount, uint256 fohAmount, uint256 bohAmount, uint256 barAmount);
     event PolicyUpdated(uint256 foh, uint256 boh, uint256 bar);
     event WorkerFlagged(address worker, string reason); // For Nansen risk checks
     event EmployeeRegistered(string identifier, address wallet);
     event IndividualTip(string identifier, address wallet, uint256 amount);
+    event TeamSet(uint256 size);
 
     constructor(address _ausdTokenAddress, address _agent) Ownable(msg.sender) {
         ausdToken = IERC20(_ausdTokenAddress);
@@ -53,8 +62,39 @@ contract TipSplitter is Ownable {
      * Called by Chainlink CRE or backend after AI parses the natural language prompt.
      */
     function registerEmployee(string calldata identifier, address wallet) external onlyAgentOrOwner {
+        require(wallet != address(0), "No wallet");
+        if (employeeWallets[identifier] == address(0)) {
+            team.push(Member(identifier, wallet, 0));
+        } else {
+            for (uint256 i = 0; i < team.length; i++) {
+                if (keccak256(bytes(team[i].name)) == keccak256(bytes(identifier))) team[i].wallet = wallet;
+            }
+        }
         employeeWallets[identifier] = wallet;
         emit EmployeeRegistered(identifier, wallet);
+    }
+
+    /**
+     * @dev Replace the whole team in one transaction: names (used to tip someone directly), wallets, groups.
+     */
+    function setTeam(string[] calldata names, address[] calldata wallets, uint8[] calldata groups) external onlyAgentOrOwner {
+        require(names.length == wallets.length && names.length == groups.length, "Length mismatch");
+        for (uint256 i = 0; i < team.length; i++) delete employeeWallets[team[i].name];
+        delete team;
+        for (uint256 i = 0; i < names.length; i++) {
+            require(bytes(names[i]).length > 0, "Empty name");
+            require(wallets[i] != address(0), "No wallet");
+            require(groups[i] < 3, "Bad group");
+            require(employeeWallets[names[i]] == address(0), "Duplicate name");
+            employeeWallets[names[i]] = wallets[i];
+            team.push(Member(names[i], wallets[i], groups[i]));
+            emit EmployeeRegistered(names[i], wallets[i]);
+        }
+        emit TeamSet(names.length);
+    }
+
+    function getTeam() external view returns (Member[] memory) {
+        return team;
     }
 
     /**
@@ -126,5 +166,31 @@ contract TipSplitter is Ownable {
         }
 
         emit TipDistributed(totalPool, fohTotal, bohTotal, barTotal);
+    }
+
+    /**
+     * @dev Pay the whole pool out to the saved team by the current policy, split evenly within each group.
+     * A group with nobody in it hands its share to the groups that have people, so nothing is left behind.
+     */
+    function payoutTeam() external onlyAgentOrOwner {
+        uint256 totalPool = ausdToken.balanceOf(address(this));
+        require(totalPool > 0, "No tips to distribute");
+        require(team.length > 0, "No team");
+
+        uint256[3] memory counts;
+        for (uint256 i = 0; i < team.length; i++) counts[team[i].group]++;
+        uint256[3] memory ratios = [currentPolicy.fohRatio, currentPolicy.bohRatio, currentPolicy.barRatio];
+        uint256 activeRatio;
+        for (uint256 g = 0; g < 3; g++) if (counts[g] > 0) activeRatio += ratios[g];
+        require(activeRatio > 0, "Policy pays no one on the team");
+
+        uint256[3] memory totals;
+        for (uint256 g = 0; g < 3; g++) if (counts[g] > 0) totals[g] = (totalPool * ratios[g]) / activeRatio;
+        for (uint256 i = 0; i < team.length; i++) {
+            uint8 g = team[i].group;
+            uint256 share = totals[g] / counts[g];
+            if (share > 0) ausdToken.safeTransfer(team[i].wallet, share);
+        }
+        emit TipDistributed(totalPool, totals[0], totals[1], totals[2]);
     }
 }

@@ -4,16 +4,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useConnectWallet, usePrivy, useWallets } from "@privy-io/react-auth";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check, Loader2, TriangleAlert } from "lucide-react";
-import { createPublicClient, formatEther, http } from "viem";
+import { createPublicClient, formatEther, http, stringToHex } from "viem";
 import { monadTestnet } from "viem/chains";
 import AccountMenu from "./AccountMenu";
 import ConnectModal from "./ConnectModal";
 import { saveLastMethod } from "./last-method";
 import { MONAD_CHAIN, directProvider, disconnectDirect, forgetSavedConnections, setSignedOut, switchDirect, switchProvider, useDirectWallets, useSignedOut, type Eip1193 } from "./wallet-store";
 import { publishWallet, type Tx } from "./wallet-bridge";
-import { ausdBalance, toDollars } from "./chain";
+import { RPC, ausdBalance, toDollars } from "./chain";
 
-const client = createPublicClient({ chain: monadTestnet, transport: http() });
+const client = createPublicClient({ chain: monadTestnet, transport: http(RPC) });
 const MONAD = `eip155:${monadTestnet.id}`;
 
 /** Live native balance, refreshed every 10s while connected. */
@@ -105,7 +105,7 @@ export default function ConnectButton({ openOnMount = false }: { openOnMount?: b
     const send = async (tx: Tx) =>
       (await (await provider()).request({ method: "eth_sendTransaction", params: [{ from: address, to: tx.to, data: tx.data }] })) as `0x${string}`;
     const sign = async (message: string) =>
-      (await (await provider()).request({ method: "personal_sign", params: [message, address] })) as `0x${string}`;
+      (await (await provider()).request({ method: "personal_sign", params: [stringToHex(message), address] })) as `0x${string}`;
     publishWallet({ address: address as `0x${string}`, onMonad: onRightNetwork, send, sign, via: via ?? null });
     return () => publishWallet(null);
   }, [address, onRightNetwork, direct, privyWallet, via]);
