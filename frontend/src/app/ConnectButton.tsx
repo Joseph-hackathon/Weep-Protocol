@@ -106,9 +106,9 @@ export default function ConnectButton({ openOnMount = false }: { openOnMount?: b
       (await (await provider()).request({ method: "eth_sendTransaction", params: [{ from: address, to: tx.to, data: tx.data }] })) as `0x${string}`;
     const sign = async (message: string) =>
       (await (await provider()).request({ method: "personal_sign", params: [message, address] })) as `0x${string}`;
-    publishWallet({ address: address as `0x${string}`, onMonad: onRightNetwork, send, sign });
+    publishWallet({ address: address as `0x${string}`, onMonad: onRightNetwork, send, sign, via: via ?? null });
     return () => publishWallet(null);
-  }, [address, onRightNetwork, direct, privyWallet]);
+  }, [address, onRightNetwork, direct, privyWallet, via]);
 
   // A new sign-in (not-connected → connected) clears the signed-out flag. Watching transitions, not state,
   // means the brief moment while a sign-out completes can't undo it.

@@ -6,7 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, Delete } from "lucide-react";
 import { requestConnect, useWallet } from "../wallet-bridge";
 import {
-  AUSD, EXPLORER, FAUCET, SPLITTER, ausdBalance, mintData, monBalance, readPolicy, toDollars, toUnits, transferData, waitForReceipt,
+  AUSD, EXPLORER, FAUCET, SPLITTER, ausdBalance, mintData, monBalance, readPolicy, supportsTeam, toDollars, toUnits, transferData, waitForReceipt,
 } from "../chain";
 
 /**
@@ -67,6 +67,10 @@ export default function TipFlow() {
   const [typing, setTyping] = useState(false); // "Custom": type the amount in a field (any device)
   const [intent, setIntent] = useState(false); // pressed Send before signing in: continue once signed in
   const [target, setTarget] = useState<string>("pool"); // "pool" or employee ID
+  // Tipping a person needs the updated TipSplitter (registerEmployee / tipIndividual). Until it is live on
+  // Monad, only the team pool is offered, so the page never says a tip went somewhere it didn't.
+  const [teamReady, setTeamReady] = useState(false);
+  useEffect(() => { supportsTeam().then(setTeamReady).catch(() => {}); }, []);
 
   const EMPLOYEES = [
     { id: "Alice", role: "Floor", photo: "/hero/barista.jpg" },
@@ -229,10 +233,14 @@ export default function TipFlow() {
                 )}
               </span>
               <span className="pay-to-text">
-                <select className="pay-select" value={target} onChange={(e) => setTarget(e.target.value)}>
-                  <option value="pool">Team tip pool</option>
-                  {EMPLOYEES.map(emp => <option key={emp.id} value={emp.id}>{emp.id} ({emp.role})</option>)}
-                </select>
+                {teamReady ? (
+                  <select className="pay-select" value={target} onChange={(e) => setTarget(e.target.value)}>
+                    <option value="pool">Team tip pool</option>
+                    {EMPLOYEES.map(emp => <option key={emp.id} value={emp.id}>{emp.id} ({emp.role})</option>)}
+                  </select>
+                ) : (
+                  <span className="pay-to-name">Team tip pool</span>
+                )}
                 <span className="pay-status">
                   {target === "pool" ? (
                     <><span className="pay-live" aria-hidden />{pool === null ? "Reading the pool…" : `${usd(pool, true)} waiting to be shared`}</>
