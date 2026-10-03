@@ -11,6 +11,7 @@ import ConnectModal from "./ConnectModal";
 import { saveLastMethod } from "./last-method";
 import { MONAD_CHAIN, directProvider, disconnectDirect, forgetSavedConnections, setSignedOut, switchDirect, switchProvider, useDirectWallets, useSignedOut, type Eip1193 } from "./wallet-store";
 import { publishWallet, type Tx } from "./wallet-bridge";
+import { ausdBalance, toDollars } from "./chain";
 
 const client = createPublicClient({ chain: monadTestnet, transport: http() });
 const MONAD = `eip155:${monadTestnet.id}`;
@@ -26,6 +27,25 @@ function useBalance(address?: string) {
         const wei = await client.getBalance({ address: address as `0x${string}` });
         const n = Number(formatEther(wei));
         if (live) setValue(n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: n < 1 ? 4 : 2 }));
+      } catch {}
+    };
+    read();
+    const id = setInterval(read, 10000);
+    return () => { live = false; clearInterval(id); };
+  }, [address]);
+  return address ? value : null;
+}
+
+/** Live test-dollar (AUSD) balance, refreshed every 10s while connected. */
+function useDollars(address?: string) {
+  const [value, setValue] = useState<string | null>(null);
+  useEffect(() => {
+    if (!address) return;
+    let live = true;
+    const read = async () => {
+      try {
+        const d = toDollars(await ausdBalance(address));
+        if (live) setValue(`$${d.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
       } catch {}
     };
     read();
@@ -71,6 +91,7 @@ export default function ConnectButton({ openOnMount = false }: { openOnMount?: b
   const via = direct?.wallet.name ?? user?.email?.address ?? undefined;
   const settingUp = authenticated && !address; // signed in; Privy is creating the wallet
   const balance = useBalance(address);
+  const dollars = useDollars(address);
 
   // Share the account with pages through the wallet bridge, so a page can ask for a payment without
   // loading this stack itself. The wallet shows its own confirmation; we only pass the transaction on.
@@ -196,6 +217,7 @@ export default function ConnectButton({ openOnMount = false }: { openOnMount?: b
           onRightNetwork={onRightNetwork}
           balance={balance}
           balanceSymbol={monadTestnet.nativeCurrency.symbol}
+          dollars={dollars}
           explorerUrl={`${monadTestnet.blockExplorers.default.url}/address/${address}`}
           onSwitchNetwork={switchNetwork}
           onDisconnect={disconnect}

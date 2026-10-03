@@ -64,11 +64,11 @@
 }
 
 @layer base {
-  /* Same colour behind everything, so pulling past the edge on a phone never flashes another shade */
+  /* Same colour behind everything, so pulling past the edge on a phone never flashes another shade.
+     (No overscroll-behavior here: it would switch off pull-to-refresh and swipe back/forward on phones.) */
   html, body {
     background: var(--surface-canvas);
     color: var(--text-primary);
-    overscroll-behavior: none;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -375,8 +375,8 @@
 }
 .cm-btn:active:not(:disabled) { transform: scale(.98); }
 .cm-btn:disabled { cursor: progress; opacity: .8; }
-.cm-btn-primary { background: var(--text-primary); color: #0b0614; border: 1px solid var(--text-primary); }
-.cm-btn-primary:hover:not(:disabled) { background: #ffffff; }
+.cm-btn-primary { background: #a2e980; color: #0a0a0a; border: 1px solid #a2e980; }   /* Weep mint, as every primary action */
+.cm-btn-primary:hover:not(:disabled) { background: #b6ef9c; }
 .cm-btn-secondary { background: rgba(243, 240, 255, .05); color: var(--text-primary); border: 1px solid var(--border-default); }
 .cm-btn-secondary:hover:not(:disabled) { background: rgba(243, 240, 255, .09); }
 
@@ -981,3 +981,61 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
   .pay-ellipsis::after { content: "..."; }
   .pay-amount, .pay-key, .pay-send { transition: none; }
 }
+
+/* ── Account: Connect and the connected chip, in the payment card's language ──────────────────────
+   One primary colour across Weep (soft mint, #A2E980) on deep surfaces with crisp 1px lines. */
+:root {
+  --mint: #a2e980; --mint-hover: #b6ef9c; --mint-glow: rgba(162, 233, 128, .35); --ink: #0a0a0a;
+  --deep: #0d0b14; --raised: #191426; --raised-hover: #201936; --well: #141021; --well-line: #221b33;
+  --line: #2e2640; --line-soft: #1e192d;
+}
+
+/* Primary action (Connect, Get started, …): mint, lifts and glows a little on hover. */
+.btn-connect {
+  background: var(--mint); border-color: var(--mint); color: var(--ink); border-radius: var(--radius-3);
+  box-shadow: 0 4px 18px rgba(162, 233, 128, .18);
+  transition: background-color var(--motion-fast-2) var(--ease-standard), translate var(--motion-fast-2) var(--ease-standard),
+              box-shadow var(--motion-medium-2) var(--ease-standard), transform var(--motion-fast-2) var(--ease-standard);
+}
+.btn-connect:hover:not(:disabled) { background: var(--mint-hover); translate: 0 -1px; box-shadow: 0 0 22px var(--mint-glow); }
+.btn-connect:active:not(:disabled) { translate: 0 0; }
+.btn-connect:focus-visible { outline-color: var(--mint); }
+
+/* Connected: a pixel face made from the wallet address, a live dot, the short address (and balance on desktop). */
+.btn-account {
+  gap: 10px; padding: 0 10px 0 7px; border-radius: var(--radius-3); color: #fff;
+  background: var(--raised); border: 1px solid var(--line);
+  transition: background-color var(--motion-fast-2) var(--ease-standard), border-color var(--motion-fast-2) var(--ease-standard), transform var(--motion-fast-2) var(--ease-standard);
+}
+.btn-account:hover { background: var(--raised-hover); border-color: #3d3354; }
+.btn-account[aria-expanded="true"] { background: var(--raised-hover); border-color: rgba(162, 233, 128, .45); }
+.btn-account:focus-visible { outline-color: var(--mint); }
+.identicon { display: block; flex: none; border-radius: var(--radius-2); }
+.badge-wrap { position: relative; display: inline-flex; }
+.acct-status {
+  position: absolute; right: -3px; bottom: -3px; width: 10px; height: 10px; border-radius: var(--radius-full);
+  background: var(--mint); box-shadow: 0 0 0 2px var(--raised), 0 0 8px rgba(162, 233, 128, .7);
+  animation: chip-pulse 2.4s ease-in-out infinite;
+}
+.acct-status.is-wrong { background: var(--status-warning); box-shadow: 0 0 0 2px var(--raised), 0 0 8px rgba(252, 211, 77, .6); }
+.acct-text { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 0; }
+.btn-account .account-address, .panel-address { font-family: var(--font-geist-sans), system-ui, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.btn-account .account-address { font-size: 13px; line-height: 16px; font-weight: 600; color: #fff; }
+.acct-sub { font-size: 11px; line-height: 13px; color: #a1a1aa; font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (max-width: 599px) {
+  .acct-sub { display: none; }
+  .btn-account { gap: var(--space-2); }
+}
+
+/* The account menu: the same dark card. */
+.account-panel { background: var(--deep); border: 1px solid var(--line); border-radius: var(--radius-4); box-shadow: 0 30px 60px -20px rgba(0, 0, 0, .85); }
+.panel-address { color: #fff; }
+.panel-network .network-dot { background: var(--mint); box-shadow: 0 0 6px rgba(162, 233, 128, .6); }
+.panel-balance { background: var(--well); border: 1px solid var(--well-line); }
+.panel-balance-value { font-family: var(--font-geist-sans), system-ui, sans-serif; font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; color: #fff; }
+.panel-fee-line { font-size: 12px; line-height: 16px; color: #a1a1aa; font-variant-numeric: tabular-nums; }
+.panel-divider { background: var(--line-soft); }
+.panel-item:hover, .panel-item:focus-visible { background: var(--raised); color: #fff; }
+.panel-item:hover svg, .panel-item:focus-visible svg { color: var(--mint); }
+.panel-item.is-danger:hover svg, .panel-item.is-danger:focus-visible svg { color: var(--status-danger); }
+@media (prefers-reduced-motion: reduce) { .acct-status { animation: none; } .btn-connect, .btn-account { transition: none; } }

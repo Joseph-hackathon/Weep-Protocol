@@ -6,22 +6,34 @@ import { ArrowUpRight, Check, ChevronDown, Copy, Eye, EyeOff, LogOut, RefreshCw 
 import { paletteFor, type BadgePalette } from "./badges";
 
 export const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+/** "$1,010,096.00" → "$1.01M"; small amounts stay exact. */
+const compact = (dollars: string) => {
+  const n = Number(dollars.replace(/[$,]/g, ""));
+  return n < 10000 ? dollars : "$" + n.toLocaleString("en-US", { notation: "compact", maximumFractionDigits: 2 });
+};
 
 /**
- * The wallet's badge: one of twenty designed palettes, chosen by the address so people
- * recognise their own wallet. Geometry and lighting are identical for every palette.
+ * The wallet's face: a 5 × 5 pixel mark generated from the address (mirrored, like a stamp), drawn in this
+ * browser's private palette for that wallet. Unique, recognisable at a glance, and the same everywhere.
  */
-export function AddressBadge({ address, size, palette }: { address: string; size: number; palette?: BadgePalette }) {
+export function Identicon({ address, size, palette }: { address: string; size: number; palette?: BadgePalette }) {
   const { light, deep } = palette ?? paletteFor(address);
+  const hex = address.toLowerCase().replace(/^0x/, "");
+  const cells: { x: number; y: number; c: string }[] = [];
+  for (let y = 0; y < 5; y++) {
+    for (let x = 0; x < 3; x++) {
+      const n = parseInt(hex[(y * 3 + x) % hex.length] || "0", 16);
+      if (n % 3 === 0) continue;                       // a third of cells stay empty
+      const c = n % 3 === 1 ? light : deep;
+      cells.push({ x, y, c });
+      if (x < 2) cells.push({ x: 4 - x, y, c });       // mirror
+    }
+  }
   return (
-    <span
-      aria-hidden
-      className="address-badge"
-      style={{
-        width: size, height: size,
-        background: `radial-gradient(120% 120% at 28% 22%, ${light} 0%, ${deep} 72%)`,
-      }}
-    />
+    <svg aria-hidden className="identicon" width={size} height={size} viewBox="-1 -1 7 7" shapeRendering="crispEdges">
+      <rect x="-1" y="-1" width="7" height="7" fill="#191426" />
+      {cells.map((k, i) => <rect key={i} x={k.x} y={k.y} width="1" height="1" fill={k.c} />)}
+    </svg>
   );
 }
 
@@ -30,8 +42,9 @@ type Props = {
   networkName: string;
   via?: string;               // how they signed in: wallet name or email
   onRightNetwork: boolean;
-  balance: string | null;      // formatted, e.g. "1.2045"; null while loading
+  balance: string | null;      // MON (network fees), formatted; null while loading
   balanceSymbol: string;
+  dollars: string | null;      // test dollars (AUSD), formatted with $; null while loading
   explorerUrl: string;
   onSwitchNetwork: () => void;
   onDisconnect: () => void;
@@ -109,10 +122,15 @@ export default function AccountMenu(p: Props) {
         onClick={(e) => { setViaKeyboard(e.detail === 0); setOpen((o) => !o); }}
       >
         <span className="badge-wrap">
-          <AddressBadge address={p.address} size={24} />
-          {!p.onRightNetwork && <span className="badge-alert" aria-hidden />}
+          <Identicon address={p.address} size={28} />
+          <span className={p.onRightNetwork ? "acct-status" : "acct-status is-wrong"} aria-hidden />
         </span>
-        <span className="account-address">{short(p.address)}</span>
+        <span className="acct-text">
+          <span className="account-address">{short(p.address)}</span>
+          <span className="acct-sub">
+            {!p.onRightNetwork ? "Wrong network" : p.dollars === null || hidden ? "Monad" : `${compact(p.dollars)} · Monad`}
+          </span>
+        </span>
         <ChevronDown size={16} strokeWidth={2} aria-hidden className="account-chevron" data-open={open} />
       </button>
 
@@ -131,7 +149,7 @@ export default function AccountMenu(p: Props) {
           >
             {/* Identity */}
             <div className="panel-identity">
-              <AddressBadge address={p.address} size={40} />
+              <Identicon address={p.address} size={44} />
               <div className="panel-identity-text">
                 <span className="panel-address">{short(p.address)}</span>
                 {p.onRightNetwork
@@ -141,16 +159,16 @@ export default function AccountMenu(p: Props) {
               </div>
             </div>
 
-            {/* Balance */}
+            {/* Balance: what people think in (test dollars) first, then the MON that pays network fees */}
             <div className="panel-balance">
               <div className="panel-balance-head">
-                <span className="panel-label" id={`${menuId}-bal`}>Balance</span>
+                <span className="panel-label" id={`${menuId}-bal`}>Test dollars</span>
                 <button
                   type="button"
                   role="menuitemcheckbox"
                   aria-checked={hidden}
-                  aria-label={hidden ? "Show balance" : "Hide balance"}
-                  title={hidden ? "Show balance" : "Hide balance"}
+                  aria-label={hidden ? "Show balances" : "Hide balances"}
+                  title={hidden ? "Show balances" : "Hide balances"}
                   className="icon-btn"
                   onClick={toggleHidden}
                 >
@@ -158,12 +176,12 @@ export default function AccountMenu(p: Props) {
                 </button>
               </div>
               <span className="panel-balance-value" aria-labelledby={`${menuId}-bal`}>
-                {p.balance === null
+                {p.dollars === null
                   ? <span className="balance-skeleton" aria-label="Loading balance" />
-                  : hidden
-                    ? <span className="balance-masked" aria-label="Balance hidden">••••••</span>
-                    : p.balance}
-                <span className="panel-balance-symbol">{p.balanceSymbol}</span>
+                  : hidden ? <span className="balance-masked" aria-label="Balance hidden">••••••</span> : p.dollars}
+              </span>
+              <span className="panel-fee-line">
+                {p.balance === null ? "Reading MON…" : hidden ? "MON for network fees · ••••" : `${p.balance} ${p.balanceSymbol} for network fees`}
               </span>
             </div>
 
