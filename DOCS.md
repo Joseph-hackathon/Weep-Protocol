@@ -121,3 +121,10 @@ As Weep scales its infrastructure, we plan to expand into entirely new verticals
 
 ---
 *Weep Protocol — Programmable fairness for the modern service economy.*
+
+## 7. Resources & Market Research
+- [Pew Research Center: The State of Tipping in the U.S.](https://www.pewresearch.org/2023/11/09/services-and-industries-where-people-tip/) - Background on the scale and complexity of the US tipping culture.
+- [U.S. Department of Labor: Tip Regulations (FLSA)](https://www.dol.gov/agencies/whd/flsa/tips) - Context on the strict legal compliance required for manual tip pooling.
+- [SundayApp: Tipping Trends for Restaurants in 2025](https://sundayapp.com/en-gb/tipping-trends-for-restaurants-in-2025/) - Research on modern tipping behaviors and the shift towards digital gratuity.
+- [RestaurantOnline: Half of consumers still don’t trust restaurants to pass on tips](https://www.restaurantonline.co.uk/Article/2025/10/01/half-of-consumers-still-dont-trust-restaurants-to-pass-on-tips-according-to-new-research/) - Validates Weep's core thesis that the industry suffers from a fundamental lack of trust and transparency.
+- [HospitalityNet: Smooth operations: why the next wave of hotel tech is invisible](https://www.hospitalitynet.org/opinion/4129380.html) - Highlights the urgent need for backend automation (like Weep's Smart Contracts) to reduce administrative overhead in hospitality.
