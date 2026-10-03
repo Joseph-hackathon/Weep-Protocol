@@ -2,36 +2,18 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowUpRight, Check, ChevronDown, Copy, Eye, EyeOff, LogOut, RefreshCw } from "lucide-react";
-import { paletteFor, type BadgePalette } from "./badges";
+import { ArrowUpRight, Check, ChevronDown, Copy, Eye, EyeOff, LogOut, RefreshCw, Wallet } from "lucide-react";
 
 export const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
-
-/**
- * The wallet's badge: one of twenty designed palettes, chosen by the address so people
- * recognise their own wallet. Geometry and lighting are identical for every palette.
- */
-export function AddressBadge({ address, size, palette }: { address: string; size: number; palette?: BadgePalette }) {
-  const { light, deep } = palette ?? paletteFor(address);
-  return (
-    <span
-      aria-hidden
-      className="address-badge"
-      style={{
-        width: size, height: size,
-        background: `radial-gradient(120% 120% at 28% 22%, ${light} 0%, ${deep} 72%)`,
-      }}
-    />
-  );
-}
 
 type Props = {
   address: string;
   networkName: string;
   via?: string;               // how they signed in: wallet name or email
   onRightNetwork: boolean;
-  balance: string | null;      // formatted, e.g. "1.2045"; null while loading
+  balance: string | null;      // MON (network fees), formatted; null while loading
   balanceSymbol: string;
+  dollars: string | null;      // test dollars (AUSD), formatted with $; null while loading
   explorerUrl: string;
   onSwitchNetwork: () => void;
   onDisconnect: () => void;
@@ -108,12 +90,9 @@ export default function AccountMenu(p: Props) {
         aria-label={`Account ${short(p.address)}${p.onRightNetwork ? "" : ", on the wrong network"}`}
         onClick={(e) => { setViaKeyboard(e.detail === 0); setOpen((o) => !o); }}
       >
-        <span className="badge-wrap">
-          <AddressBadge address={p.address} size={24} />
-          {!p.onRightNetwork && <span className="badge-alert" aria-hidden />}
-        </span>
+        <span className={p.onRightNetwork ? "acct-dot" : "acct-dot is-wrong"} aria-hidden />
         <span className="account-address">{short(p.address)}</span>
-        <ChevronDown size={16} strokeWidth={2} aria-hidden className="account-chevron" data-open={open} />
+        <ChevronDown size={14} strokeWidth={2.25} aria-hidden className="account-chevron" data-open={open} />
       </button>
 
       <AnimatePresence>
@@ -131,7 +110,7 @@ export default function AccountMenu(p: Props) {
           >
             {/* Identity */}
             <div className="panel-identity">
-              <AddressBadge address={p.address} size={40} />
+              <span className="panel-avatar" aria-hidden><Wallet size={20} strokeWidth={1.75} /></span>
               <div className="panel-identity-text">
                 <span className="panel-address">{short(p.address)}</span>
                 {p.onRightNetwork
@@ -141,16 +120,16 @@ export default function AccountMenu(p: Props) {
               </div>
             </div>
 
-            {/* Balance */}
+            {/* Balance: what people think in (test dollars) first, then the MON that pays network fees */}
             <div className="panel-balance">
               <div className="panel-balance-head">
-                <span className="panel-label" id={`${menuId}-bal`}>Balance</span>
+                <span className="panel-label" id={`${menuId}-bal`}>Test dollars</span>
                 <button
                   type="button"
                   role="menuitemcheckbox"
                   aria-checked={hidden}
-                  aria-label={hidden ? "Show balance" : "Hide balance"}
-                  title={hidden ? "Show balance" : "Hide balance"}
+                  aria-label={hidden ? "Show balances" : "Hide balances"}
+                  title={hidden ? "Show balances" : "Hide balances"}
                   className="icon-btn"
                   onClick={toggleHidden}
                 >
@@ -158,12 +137,12 @@ export default function AccountMenu(p: Props) {
                 </button>
               </div>
               <span className="panel-balance-value" aria-labelledby={`${menuId}-bal`}>
-                {p.balance === null
+                {p.dollars === null
                   ? <span className="balance-skeleton" aria-label="Loading balance" />
-                  : hidden
-                    ? <span className="balance-masked" aria-label="Balance hidden">••••••</span>
-                    : p.balance}
-                <span className="panel-balance-symbol">{p.balanceSymbol}</span>
+                  : hidden ? <span className="balance-masked" aria-label="Balance hidden">••••••</span> : p.dollars}
+              </span>
+              <span className="panel-fee-line">
+                {p.balance === null ? "Reading MON…" : hidden ? "MON for network fees · ••••" : `${p.balance} ${p.balanceSymbol} for network fees`}
               </span>
             </div>
 
