@@ -1,9 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowUpRight, Check, Copy, HandCoins, Sparkles, Wallet } from "lucide-react";
-import Kinetic from "../Kinetic";
+import { ArrowUpRight } from "lucide-react";
 import { requestConnect, useWallet } from "../wallet-bridge";
 import { EXPLORER, ausdBalance, toDollars } from "../chain";
 
@@ -64,77 +64,92 @@ export default function TipsHome() {
   };
   const fade = { initial: { opacity: 0, y: reduce ? 0 : 12 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: reduce ? 0 : -8 }, transition: { duration: reduce ? 0 : 0.28, ease: EASE } };
 
+  const amount = mine === null ? null : mine.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const size = amount && amount.length > 11 ? "s" : amount && amount.length > 8 ? "m" : "l";
+
   return (
     <div className="pay">
       <AnimatePresence mode="wait" initial={false}>
         {!address ? (
           <motion.div key="out" className="pay-card e-card" {...fade}>
-            <span className="m-eyebrow">Employee Dashboard</span>
-            <h1 className="m-title"><Kinetic text="Your tips" /></h1>
-            <p className="m-sub">Sign in with the email your manager added. Your wallet is already set up, so there&apos;s nothing to install.</p>
-            <ol className="e-how">
-              <li><span className="e-how-icon" aria-hidden><HandCoins size={16} /></span><span>Customers tip you or the whole team</span></li>
-              <li><span className="e-how-icon" aria-hidden><Wallet size={16} /></span><span>It lands in your wallet. Nothing to claim</span></li>
-              <li><span className="e-how-icon" aria-hidden><Sparkles size={16} /></span><span>You see it here the moment it arrives</span></li>
-            </ol>
+            {/* A real moment, not an explainer: someone at work, a tip landing. */}
+            <div className="e-photo">
+              <Image src="/hero/bartender.jpg" alt="" fill sizes="(min-width: 600px) 400px, 100vw" priority />
+              <span className="e-photo-chip" aria-hidden><span className="pay-live" /><Arrivals /><span className="e-photo-when">just now</span></span>
+            </div>
+            <h1 className="e-title">Your tips</h1>
+            <p className="e-line">Sign in with the email your manager added. Your wallet is already there.</p>
             <button type="button" className="pay-send" onClick={requestConnect}>
               <span className="pay-send-label"><span>Sign in with email</span></span>
             </button>
           </motion.div>
         ) : (
           <motion.div key="in" className={`pay-card e-card${latest ? " is-celebrating" : ""}`} {...fade}>
-            <div className="e-who">
-              <span className="acct-dot" aria-hidden />
-              <span className="e-who-text">Signed in as <b>{wallet.via && wallet.via.includes("@") ? wallet.via : short(address)}</b></span>
-            </div>
-
-            <section className="e-balance" aria-live="polite">
-              <span className="e-balance-label">Your tips</span>
-              <span className={`e-balance-value${mine !== null && usd(mine).length > 12 ? " is-s" : mine !== null && usd(mine).length > 9 ? " is-m" : ""}`}>
-                {mine === null ? <span className="balance-skeleton e-skeleton" aria-label="Loading your tips" /> : <Roll value={usd(mine)} />}
+            <header className="pay-to">
+              <span className="pay-faces" aria-hidden><span className="pay-face"><Image src="/hero/bartender.jpg" alt="" fill sizes="32px" priority /></span></span>
+              <span className="pay-to-text">
+                <span className="pay-to-name">Your tips</span>
+                <span className="pay-status"><span className="pay-live" aria-hidden />{wallet.via && wallet.via.includes("@") ? wallet.via : short(address)}</span>
               </span>
-              <AnimatePresence>
-                {latest && (
-                  <motion.span key={latest.id} className="e-arrived" initial={{ opacity: 0, y: reduce ? 0 : 8, scale: reduce ? 1 : 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduce ? 0 : 0.35, ease: EASE }}>
-                    +{usd(latest.dollars)} just arrived
+              <button type="button" className="pay-details-btn" onClick={copy}>{copied ? "Copied" : "Copy address"}</button>
+            </header>
+
+            <div className={`pay-amount pay-amount-${size} e-amount`} aria-live="polite" aria-label={amount ? `Your tips: $${amount}` : "Loading your tips"}>
+              <span className="pay-currency" aria-hidden>$</span>
+              {amount === null ? <span className="balance-skeleton e-skeleton" /> : <Roll value={amount} />}
+            </div>
+            <div className="e-under">
+              <AnimatePresence mode="wait" initial={false}>
+                {latest ? (
+                  <motion.span key={latest.id} className="e-arrived" initial={{ opacity: 0, y: reduce ? 0 : 6, scale: reduce ? 1 : 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduce ? 0 : 0.3, ease: EASE }}>
+                    +{usd(latest.dollars)} just now
+                  </motion.span>
+                ) : (
+                  <motion.span key="calm" className="e-calm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    Paid straight to your wallet
                   </motion.span>
                 )}
               </AnimatePresence>
-              <span className="e-balance-sub"><span className="pay-live" aria-hidden />Live · paid straight to your wallet, nothing to claim</span>
-            </section>
-
-            <section className="e-feed" aria-labelledby="e-feed">
-              <h2 id="e-feed" className="e-feed-title">Just arrived</h2>
-              {arrivals.length === 0 ? (
-                <p className="e-empty">New tips appear here the moment they land.</p>
-              ) : (
-                <ul>
-                  <AnimatePresence initial={false}>
-                    {arrivals.map((a) => (
-                      <motion.li key={a.id} layout={!reduce} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} transition={{ duration: reduce ? 0 : 0.3, ease: EASE }}>
-                        <span className="e-feed-icon" aria-hidden><HandCoins size={14} /></span>
-                        <span className="e-feed-what">Tip</span>
-                        <span className="e-feed-when">{ago(a.at, now)}</span>
-                        <span className="e-feed-amount">+{usd(a.dollars)}</span>
-                      </motion.li>
-                    ))}
-                  </AnimatePresence>
-                </ul>
-              )}
-            </section>
-
-            <div className="e-actions">
-              <button type="button" className="btn-secondary" onClick={copy}>
-                {copied ? <Check size={16} aria-hidden /> : <Copy size={16} aria-hidden />} {copied ? "Copied" : "Copy wallet address"}
-              </button>
-              <a className="btn-secondary" href={`${EXPLORER}/address/${address}`} target="_blank" rel="noreferrer">
-                All tips <ArrowUpRight size={16} aria-hidden />
-              </a>
             </div>
+
+            {arrivals.length > 0 && (
+              <ul className="e-feed" aria-label="Tips that just arrived">
+                <AnimatePresence initial={false}>
+                  {arrivals.map((a) => (
+                    <motion.li key={a.id} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} transition={{ duration: reduce ? 0 : 0.3, ease: EASE }}>
+                      <span className="e-feed-amount">+{usd(a.dollars)}</span>
+                      <span className="e-feed-when">{ago(a.at, now)}</span>
+                    </motion.li>
+                  ))}
+                </AnimatePresence>
+              </ul>
+            )}
+
+            <a className="e-all" href={`${EXPLORER}/address/${address}`} target="_blank" rel="noreferrer">See every tip on Monad <ArrowUpRight size={14} aria-hidden /></a>
           </motion.div>
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+/** The signed-out photo's chip: a tip lands every few seconds. */
+const SAMPLE = ["4.50", "12.00", "3.25", "8.00", "6.00"];
+function Arrivals() {
+  const reduce = useReducedMotion();
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => { if (!document.hidden) setN((x) => (x + 1) % SAMPLE.length); }, 2800);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <span className="e-photo-amount">
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.b key={n} initial={{ y: reduce ? 0 : "100%", opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: reduce ? 0 : "-100%", opacity: 0 }} transition={{ duration: reduce ? 0 : 0.32, ease: EASE }}>
+          +${SAMPLE[n]}
+        </motion.b>
+      </AnimatePresence>
+    </span>
   );
 }
 
