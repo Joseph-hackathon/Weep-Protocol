@@ -25,6 +25,45 @@ Weep eliminates these bottlenecks through a completely decentralized, gasless (f
 
 Weep's architecture is a composite of cutting-edge Web3 primitives working in harmony.
 
+```mermaid
+flowchart TB
+    subgraph SENDER["Sender Interface"]
+        APP["Web/POS/Gig-App"]
+        AUTH_P["Privy Auth/Fiat-Ramp"]
+    end
+    
+    subgraph ORACLE["Chainlink CRE"]
+        LLM["Gemini 1.5 JSON Parser"]
+        CRE_NODE["CRE Workflow Engine"]
+    end
+    
+    subgraph ONCHAIN["Monad Testnet"]
+        CONTRACT["TipSplitter.sol"]
+        POOL["Liquidity Pool (AUSD)"]
+    end
+    
+    subgraph RECEIVER["Receiver System"]
+        DASH["Weep Dashboard"]
+        AUTH_R["Privy Embedded Wallet"]
+        NANSEN["Nansen Sybil Check"]
+    end
+
+    APP -->|Tip Transaction| AUTH_P
+    AUTH_P -->|Smart Tip Intent| CONTRACT
+    CONTRACT -->|Trigger Policy Request| CRE_NODE
+    CRE_NODE <-->|Parse Natural Language| LLM
+    CRE_NODE -->|Return JSON Ratios| CONTRACT
+    CONTRACT -->|Hold Funds| POOL
+    NANSEN -.->|Verify Address| CONTRACT
+    POOL -->|Push AUSD 0 Gas| AUTH_R
+    AUTH_R --> DASH
+
+    style ONCHAIN fill:#8b5cf6,stroke:#a855f7,color:#fff
+    style ORACLE fill:#2563eb,stroke:#60a5fa,color:#fff
+    style SENDER fill:#18181b,stroke:#27272a,color:#fff
+    style RECEIVER fill:#10b981,stroke:#34d399,color:#fff
+```
+
 ### 2.1 Settlement Layer (Monad Testnet)
 At the base level, Weep requires ultra-fast finality and low fees. Monad’s parallel execution EVM provides the bandwidth necessary for thousands of micro-tips to be processed per second. 
 - **Push-Based Payouts:** Unlike traditional DeFi where users must "claim" tokens (paying gas), Weep uses a push model. The Smart Contract auto-distributes AUSD (stablecoin) directly into the worker's wallet.
@@ -57,17 +96,66 @@ The simplest and most powerful flow.
 ## 4. User Flows
 
 ### 4.1 The Sender (Customer / Tipper)
+
+```mermaid
+sequenceDiagram
+    participant S as Sender
+    participant UI as Weep UI / QR
+    participant P as Privy
+    participant M as Monad Contract
+    
+    S->>UI: Scan QR or Click Tip Link
+    UI->>S: Show Target (Individual or Team)
+    S->>UI: Enter Tip Amount (e.g., 10 AUSD)
+    UI->>P: Trigger Payment (Crypto/Card)
+    P->>M: Send AUSD to TipSplitter
+    M-->>S: Instant Confirmation
+```
+
 1. Sender scans a QR code (at a table, in a hotel room) or clicks a Weep Link in their gig-app receipt.
 2. Sender sees the profile of the individual or team they are tipping.
 3. Sender selects the amount and pays (via Web3 Wallet or Fiat-on-Ramp via Privy).
 4. Transaction is instantly verified on Monad.
 
 ### 4.2 The Receiver (Employee / Creator)
+
+```mermaid
+sequenceDiagram
+    participant M as Monad Contract
+    participant E as Email / SMS
+    participant R as Receiver
+    participant P as Privy Wallet
+    
+    M->>P: Push AUSD (Zero Gas Fee)
+    M->>E: Trigger Notification Event
+    E->>R: "You received a tip!"
+    R->>P: Log in via Email (No Seed Phrase)
+    P-->>R: View Instant Balance
+```
+
 1. Receiver gets an SMS or Email notification: *"You received a 10 AUSD tip!"*
 2. Receiver logs into the Weep Dashboard using their email (Privy).
 3. Receiver sees their balance update in real-time. The funds are already in their non-custodial wallet—no "Claim" button required.
 
 ### 4.3 The Administrator (Merchant / Platform Owner)
+
+```mermaid
+sequenceDiagram
+    participant A as Admin
+    participant UI as Weep Dashboard
+    participant N as Nansen KYC
+    participant CRE as Chainlink CRE
+    participant M as Monad Contract
+    
+    A->>UI: Create Workspace & Invite Team
+    UI->>N: Verify New Wallet Addresses
+    N-->>UI: Wallets Approved (Sybil Resistant)
+    A->>UI: Input Natural Language Policy
+    UI->>CRE: Prompt Gemini 1.5
+    CRE->>M: Lock JSON Ratios On-Chain
+    M-->>A: Policy Active & Ready
+```
+
 1. Admin creates a "Weep Workspace" for their business or platform.
 2. Admin invites Receivers via email. Nansen verifies the newly created receiver wallets.
 3. Admin types natural language rules to define how "Pool" tips are split, which Chainlink CRE locks into the smart contract.
