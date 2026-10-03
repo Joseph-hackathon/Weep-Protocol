@@ -831,7 +831,7 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
 .pay-max:hover { background: rgba(162, 233, 128, .1); }
 
 /* Amount chips: tech squircles; the chosen one is lime. */
-.pay-quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-2); }
+.pay-quick { display: none; }   /* the keypad is the one way to enter an amount, on every device */
 .pay-chip {
   height: 40px; border-radius: var(--radius-3); cursor: pointer;
   font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; color: #d4d4d8;
@@ -863,7 +863,7 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
 .roll > span { grid-area: 1 / 1; }
 
 /* Tall touch phones: a keypad, so the amount is typed straight in; it replaces the chips. */
-.pay-keypad { display: none; }
+.pay-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin-top: calc(-1 * var(--space-2)); }
 @media (pointer: coarse) and (min-height: 800px) {
   .pay-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin-top: calc(-1 * var(--space-2)); }
   .pay-quick { display: none; }
@@ -874,7 +874,27 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
   display: grid; place-items: center; font-size: 26px; line-height: 32px; font-weight: 500; color: #fff;
   -webkit-tap-highlight-color: transparent; transition: background-color var(--motion-fast-2) var(--ease-standard), transform var(--motion-fast-2) var(--ease-standard);
 }
-.pay-key:active { background: var(--pay-raised); transform: scale(.96); }
+.pay-key:hover:not(:disabled) { background: rgba(243, 240, 255, .04); }
+.pay-key:active, .pay-key.is-pressed { color: var(--pay-lime); background: rgba(162, 233, 128, .12); transform: scale(.94); transition-duration: 60ms; }
+.pay-key:disabled { opacity: .4; cursor: default; }
+/* Pointer devices (laptop, desktop): the centred card keeps clear of the footer and fits short screens. */
+@media (pointer: fine), (min-width: 1100px) {
+  body:has(.tip-page) .site-main { padding-bottom: calc(var(--footer-h) + var(--bottom-pad) + var(--space-2)); }
+  .pay-key { height: 46px; }
+}
+@media ((pointer: fine) or (min-width: 1100px)) and (max-height: 820px) {
+  .tip-page { padding-block: var(--space-3); }
+  .pay-card { gap: 12px; }
+  .pay-to { padding-bottom: var(--space-3); }
+  .pay-amount { font-size: 56px; line-height: 64px; padding-top: 0; }
+  .pay-key { height: 40px; font-size: 24px; }
+  .pay-send { height: 48px; }
+}
+@media ((pointer: fine) or (min-width: 1100px)) and (max-height: 700px) {
+  .pay-key { height: 36px; font-size: 22px; }
+  .pay-amount { font-size: 48px; line-height: 56px; }
+  .pay-bar { margin: 6px 0; }
+}
 
 /* One action in electric lime; while working, it goes dark with a lime light sweeping across. */
 .pay-send {

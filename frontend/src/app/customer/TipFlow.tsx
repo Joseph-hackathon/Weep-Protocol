@@ -115,11 +115,20 @@ export default function TipFlow() {
     return () => { live = false; };
   }, [address]);
 
+  // Every key answers the press the same way on every device: a short mint flash on the key (also when
+  // the matching key is typed on a physical keyboard) and, on phones that allow it, a tiny vibration.
+  const [pressed, setPressed] = useState<{ key: string; n: number } | null>(null);
   const press = useCallback((k: string) => {
     setEntry((e) => nextEntry(e, k));
     setMessage(null);
-    try { navigator.vibrate?.(6); } catch {}   // a tiny tap on phones that support it (Android)
+    setPressed((p) => ({ key: k, n: (p?.n ?? 0) + 1 }));
+    try { navigator.vibrate?.(6); } catch {}
   }, []);
+  useEffect(() => {
+    if (!pressed) return;
+    const id = setTimeout(() => setPressed(null), 160);
+    return () => clearTimeout(id);
+  }, [pressed]);
 
   // Desktop: type the amount straight in.
   useEffect(() => {
@@ -333,7 +342,7 @@ export default function TipFlow() {
             {/* Phones: a keypad, so the amount is typed straight in */}
             <div className="pay-keypad" role="group" aria-label="Keypad">
               {KEYS.map((k) => (
-                <button key={k} type="button" className="pay-key" disabled={busy} onClick={() => press(k)} aria-label={k === "del" ? "Delete" : k === "." ? "Decimal point" : k}>
+                <button key={k} type="button" className={pressed?.key === k ? "pay-key is-pressed" : "pay-key"} disabled={busy} onClick={() => press(k)} aria-label={k === "del" ? "Delete" : k === "." ? "Decimal point" : k}>
                   {k === "del" ? <Delete size={22} aria-hidden /> : k}
                 </button>
               ))}
