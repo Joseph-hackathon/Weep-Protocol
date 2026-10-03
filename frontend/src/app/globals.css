@@ -173,16 +173,6 @@
 .account-address { font-family: var(--font-geist-mono), ui-monospace, monospace; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .account-chevron { color: var(--text-muted); transition: transform var(--motion-medium-2, 240ms) var(--ease-standard); }
 .account-chevron[data-open="true"] { transform: rotate(180deg); }
-/* One geometry and lighting model for all 20 palettes: inner rim + top-left sheen. Only colour varies. */
-.address-badge {
-  position: relative; display: block; flex-shrink: 0; border-radius: var(--radius-full); overflow: hidden;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22), inset 0 -2px 6px rgba(0, 0, 0, .25), 0 1px 2px rgba(0, 0, 0, .4);
-}
-.address-badge::after {
-  content: ""; position: absolute; inset: 0; border-radius: inherit;
-  background: radial-gradient(40% 35% at 32% 26%, rgba(255, 255, 255, .45), transparent 70%);
-}
-
 /* Panel: 288px, right edge on the same keyline as the button; never wider than the content column */
 .account-panel {
   position: absolute; right: 0; top: calc(100% + var(--space-2)); z-index: 20;
@@ -428,11 +418,6 @@
 @media (prefers-reduced-motion: reduce) { .cm-spin { animation-duration: 1.6s; } }
 
 /* ── Wrong network (manual §7.3: never colour alone, so icon + words + action) ─── */
-.badge-wrap { position: relative; display: inline-flex; }
-.badge-alert {
-  position: absolute; right: 0; top: 0; width: 8px; height: 8px; border-radius: var(--radius-full);
-  background: var(--status-warning); box-shadow: 0 0 0 2px var(--surface-canvas);
-}
 .panel-network.is-wrong { color: var(--status-warning); }
 .panel-network.is-wrong .network-dot { background: var(--status-warning); box-shadow: 0 0 6px rgba(252, 211, 77, .6); }
 .panel-item.is-warning { color: var(--status-warning); }
@@ -1001,31 +986,27 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
 .btn-connect:active:not(:disabled) { translate: 0 0; }
 .btn-connect:focus-visible { outline-color: var(--mint); }
 
-/* Connected: a pixel face made from the wallet address, a live dot, the short address (and balance on desktop). */
+/* Header actions (Connect, the account pill): slim and quiet, centred in the header row and on the right page
+   margin. Visually 36px on phones and 40px from 600px, with an invisible 44px touch area (manual §8.1). */
+.account-dock .btn-connect, .btn-account { position: relative; height: 36px; padding: 0 14px; border-radius: 10px; font-size: 13px; line-height: 16px; }
+.account-dock .btn-connect::before, .btn-account::before { content: ""; position: absolute; inset: -4px -2px; }
+@media (min-width: 600px) { .account-dock .btn-connect, .btn-account { height: 40px; padding: 0 16px; font-size: 14px; } }
+
+/* Connected: a live dot, the short address and a chevron, in a quiet pill. */
 .btn-account {
-  gap: 10px; padding: 0 10px 0 7px; border-radius: var(--radius-3); color: #fff;
+  gap: var(--space-2); padding-left: 12px; padding-right: 10px; color: #fff;
   background: var(--raised); border: 1px solid var(--line);
   transition: background-color var(--motion-fast-2) var(--ease-standard), border-color var(--motion-fast-2) var(--ease-standard), transform var(--motion-fast-2) var(--ease-standard);
 }
 .btn-account:hover { background: var(--raised-hover); border-color: #3d3354; }
 .btn-account[aria-expanded="true"] { background: var(--raised-hover); border-color: rgba(162, 233, 128, .45); }
 .btn-account:focus-visible { outline-color: var(--mint); }
-.identicon { display: block; flex: none; border-radius: var(--radius-2); }
-.badge-wrap { position: relative; display: inline-flex; }
-.acct-status {
-  position: absolute; right: -3px; bottom: -3px; width: 10px; height: 10px; border-radius: var(--radius-full);
-  background: var(--mint); box-shadow: 0 0 0 2px var(--raised), 0 0 8px rgba(162, 233, 128, .7);
-  animation: chip-pulse 2.4s ease-in-out infinite;
-}
-.acct-status.is-wrong { background: var(--status-warning); box-shadow: 0 0 0 2px var(--raised), 0 0 8px rgba(252, 211, 77, .6); }
-.acct-text { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 0; }
+.acct-dot { flex: none; width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--mint); box-shadow: 0 0 8px rgba(162, 233, 128, .7); animation: chip-pulse 2.4s ease-in-out infinite; }
+.acct-dot.is-wrong { background: var(--status-warning); box-shadow: 0 0 8px rgba(252, 211, 77, .6); }
 .btn-account .account-address, .panel-address { font-family: var(--font-geist-sans), system-ui, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 0; }
-.btn-account .account-address { font-size: 13px; line-height: 16px; font-weight: 600; color: #fff; }
-.acct-sub { font-size: 11px; line-height: 13px; color: #a1a1aa; font-variant-numeric: tabular-nums; white-space: nowrap; }
-@media (max-width: 599px) {
-  .acct-sub { display: none; }
-  .btn-account { gap: var(--space-2); }
-}
+.btn-account .account-address { font-size: inherit; line-height: 16px; font-weight: 600; color: #fff; }
+.btn-account .account-chevron { color: #a1a1aa; }
+.panel-avatar { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--radius-3); color: var(--mint); background: var(--well); border: 1px solid var(--well-line); }
 
 /* The account menu: the same dark card. */
 .account-panel { background: var(--deep); border: 1px solid var(--line); border-radius: var(--radius-4); box-shadow: 0 30px 60px -20px rgba(0, 0, 0, .85); }
@@ -1038,7 +1019,7 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
 .panel-item:hover, .panel-item:focus-visible { background: var(--raised); color: #fff; }
 .panel-item:hover svg, .panel-item:focus-visible svg { color: var(--mint); }
 .panel-item.is-danger:hover svg, .panel-item.is-danger:focus-visible svg { color: var(--status-danger); }
-@media (prefers-reduced-motion: reduce) { .acct-status { animation: none; } .btn-connect, .btn-account { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .acct-dot { animation: none; } .btn-connect, .btn-account { transition: none; } }
 
 /* "Get started" stays white, with the faintest lavender in it, and a soft purple glow. */
 .hero-cta.btn-connect { background: #f6f3ff; border-color: #f6f3ff; color: #0b0614; box-shadow: 0 4px 22px rgba(169, 150, 255, .16); }

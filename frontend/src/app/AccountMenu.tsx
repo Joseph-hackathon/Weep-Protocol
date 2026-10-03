@@ -2,40 +2,9 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowUpRight, Check, ChevronDown, Copy, Eye, EyeOff, LogOut, RefreshCw } from "lucide-react";
-import { paletteFor, type BadgePalette } from "./badges";
+import { ArrowUpRight, Check, ChevronDown, Copy, Eye, EyeOff, LogOut, RefreshCw, Wallet } from "lucide-react";
 
 export const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
-/** "$1,010,096.00" → "$1.01M"; small amounts stay exact. */
-const compact = (dollars: string) => {
-  const n = Number(dollars.replace(/[$,]/g, ""));
-  return n < 10000 ? dollars : "$" + n.toLocaleString("en-US", { notation: "compact", maximumFractionDigits: 2 });
-};
-
-/**
- * The wallet's face: a 5 × 5 pixel mark generated from the address (mirrored, like a stamp), drawn in this
- * browser's private palette for that wallet. Unique, recognisable at a glance, and the same everywhere.
- */
-export function Identicon({ address, size, palette }: { address: string; size: number; palette?: BadgePalette }) {
-  const { light, deep } = palette ?? paletteFor(address);
-  const hex = address.toLowerCase().replace(/^0x/, "");
-  const cells: { x: number; y: number; c: string }[] = [];
-  for (let y = 0; y < 5; y++) {
-    for (let x = 0; x < 3; x++) {
-      const n = parseInt(hex[(y * 3 + x) % hex.length] || "0", 16);
-      if (n % 3 === 0) continue;                       // a third of cells stay empty
-      const c = n % 3 === 1 ? light : deep;
-      cells.push({ x, y, c });
-      if (x < 2) cells.push({ x: 4 - x, y, c });       // mirror
-    }
-  }
-  return (
-    <svg aria-hidden className="identicon" width={size} height={size} viewBox="-1 -1 7 7" shapeRendering="crispEdges">
-      <rect x="-1" y="-1" width="7" height="7" fill="#191426" />
-      {cells.map((k, i) => <rect key={i} x={k.x} y={k.y} width="1" height="1" fill={k.c} />)}
-    </svg>
-  );
-}
 
 type Props = {
   address: string;
@@ -121,17 +90,9 @@ export default function AccountMenu(p: Props) {
         aria-label={`Account ${short(p.address)}${p.onRightNetwork ? "" : ", on the wrong network"}`}
         onClick={(e) => { setViaKeyboard(e.detail === 0); setOpen((o) => !o); }}
       >
-        <span className="badge-wrap">
-          <Identicon address={p.address} size={28} />
-          <span className={p.onRightNetwork ? "acct-status" : "acct-status is-wrong"} aria-hidden />
-        </span>
-        <span className="acct-text">
-          <span className="account-address">{short(p.address)}</span>
-          <span className="acct-sub">
-            {!p.onRightNetwork ? "Wrong network" : p.dollars === null || hidden ? "Monad" : `${compact(p.dollars)} · Monad`}
-          </span>
-        </span>
-        <ChevronDown size={16} strokeWidth={2} aria-hidden className="account-chevron" data-open={open} />
+        <span className={p.onRightNetwork ? "acct-dot" : "acct-dot is-wrong"} aria-hidden />
+        <span className="account-address">{short(p.address)}</span>
+        <ChevronDown size={14} strokeWidth={2.25} aria-hidden className="account-chevron" data-open={open} />
       </button>
 
       <AnimatePresence>
@@ -149,7 +110,7 @@ export default function AccountMenu(p: Props) {
           >
             {/* Identity */}
             <div className="panel-identity">
-              <Identicon address={p.address} size={44} />
+              <span className="panel-avatar" aria-hidden><Wallet size={20} strokeWidth={1.75} /></span>
               <div className="panel-identity-text">
                 <span className="panel-address">{short(p.address)}</span>
                 {p.onRightNetwork
