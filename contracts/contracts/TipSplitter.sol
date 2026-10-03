@@ -23,10 +23,15 @@ contract TipSplitter is Ownable {
     }
     Policy public currentPolicy;
 
+    // --- Dynamic Employee Registry ---
+    mapping(string => address) public employeeWallets;
+
     // Events formatted specifically for Nansen tracking & Analytics
     event TipDistributed(uint256 totalAmount, uint256 fohAmount, uint256 bohAmount, uint256 barAmount);
     event PolicyUpdated(uint256 foh, uint256 boh, uint256 bar);
     event WorkerFlagged(address worker, string reason); // For Nansen risk checks
+    event EmployeeRegistered(string identifier, address wallet);
+    event IndividualTip(string identifier, address wallet, uint256 amount);
 
     constructor(address _ausdTokenAddress, address _agent) Ownable(msg.sender) {
         ausdToken = IERC20(_ausdTokenAddress);
@@ -41,6 +46,29 @@ contract TipSplitter is Ownable {
 
     function setAgent(address _agent) external onlyOwner {
         agent = _agent;
+    }
+
+    /**
+     * @dev Register an employee's string identifier (e.g. "Alice") to their Privy-generated Monad wallet.
+     * Called by Chainlink CRE or backend after AI parses the natural language prompt.
+     */
+    function registerEmployee(string calldata identifier, address wallet) external onlyAgentOrOwner {
+        employeeWallets[identifier] = wallet;
+        emit EmployeeRegistered(identifier, wallet);
+    }
+
+    /**
+     * @dev Tip a specific individual directly based on their string identifier.
+     * Requires the sender to have approved this contract for the amount.
+     */
+    function tipIndividual(string calldata identifier, uint256 amount) external {
+        address recipient = employeeWallets[identifier];
+        require(recipient != address(0), "Employee not registered");
+        require(amount > 0, "Amount must be greater than zero");
+
+        // Direct transfer from Customer to Employee (Zero platform fee, Zero pool delay)
+        ausdToken.safeTransferFrom(msg.sender, recipient, amount);
+        emit IndividualTip(identifier, recipient, amount);
     }
 
     function updatePolicy(uint256 _foh, uint256 _boh, uint256 _bar) external onlyAgentOrOwner {
