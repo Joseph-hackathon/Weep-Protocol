@@ -101,7 +101,7 @@ export default function TipFlow() {
 
   const refreshFunds = useCallback(async (who: string) => {
     const [a, m] = await Promise.all([ausdBalance(who), monBalance(who)]);
-    setFunds({ ausd: ausd, mon: m, of: who });
+    setFunds({ ausd: a, mon: m, of: who });
     return { ausd: a, mon: m };
   }, []);
   useEffect(() => {
