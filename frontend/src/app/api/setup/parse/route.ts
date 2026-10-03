@@ -6,6 +6,8 @@ import { GoogleGenerativeAI, SchemaType, type ResponseSchema } from "@google/gen
  * the team and the tip rule as structured data. Nothing is saved here; the merchant reviews it first.
  */
 export type Setup = {
+  venue: string; // the business's name, if the merchant gave it
+  splitGiven: boolean; // false when the merchant didn't say how to split, so the default was used
   employees: { name: string; email: string; group: "floor" | "kitchen" | "bar" }[];
   pool: { foh: number; boh: number; bar: number };
   notes: string[]; // anything the model couldn't place, said back to the merchant in plain words
@@ -19,6 +21,8 @@ const MAX_CHARS = 4000;
 const schema: ResponseSchema = {
   type: SchemaType.OBJECT,
   properties: {
+    venue: { type: SchemaType.STRING, description: "The name of the restaurant, bar or café, as written; empty string if not given" },
+    splitGiven: { type: SchemaType.BOOLEAN, description: "true only if the owner said how pooled tips are split" },
     employees: {
       type: SchemaType.ARRAY,
       items: {
@@ -39,13 +43,14 @@ const schema: ResponseSchema = {
     },
     notes: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING }, description: "Short plain-language notes about anything unclear or missing" },
   },
-  required: ["employees", "pool", "notes"],
+  required: ["venue", "splitGiven", "employees", "pool", "notes"],
 };
 
 const instructions = `You set up tipping for a restaurant, bar or café on Weep.
-Read the owner's description and return their team and how pooled tips are split.
+Read the owner's description and return the venue's name, their team and how pooled tips are split.
 - Groups: floor (front of house), kitchen (back of house), bar.
-- If a split is given for only some groups, give the rest 0. If no split is given, use foh 60, boh 30, bar 10 and add a note saying so.
+- If a split is given for only some groups, give the rest 0. If no split is given, use foh 60, boh 30, bar 10, set splitGiven false and add a note saying so.
+- The venue name is the business's name only (e.g. "Corner Cafe"); never invent one.
 - Percentages are whole numbers that add up to exactly 100.
 - Never invent people or emails. If someone has no email, use an empty string and add a note.
 - Direct tips to a named person always go 100% to that person; you don't need to return that.`;
@@ -69,7 +74,8 @@ export async function POST(req: Request) {
     const pool = { foh: Math.max(0, Math.round(data.pool?.foh ?? 0)), boh: Math.max(0, Math.round(data.pool?.boh ?? 0)), bar: Math.max(0, Math.round(data.pool?.bar ?? 0)) };
     const notes = (data.notes ?? []).map(String).slice(0, 5);
     if (pool.foh + pool.boh + pool.bar !== 100) notes.push("The split didn't add up to 100%, so please adjust it below.");
-    return NextResponse.json({ employees, pool, notes } satisfies Setup);
+    const venue = String(data.venue ?? "").trim().slice(0, 60);
+    return NextResponse.json({ venue, splitGiven: Boolean(data.splitGiven), employees, pool, notes } satisfies Setup);
   } catch (e) {
     console.error("setup/parse", e);
     return NextResponse.json({ error: "ai-failed" }, { status: 502 });
