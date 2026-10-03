@@ -1,3 +1,5 @@
+import { TIP_SPLITTER } from "./setup-message";
+
 /**
  * Read-only access to Weep on Monad testnet with plain JSON-RPC (no wallet library, ~1 KB), plus the
  * call data for the two transactions the customer can make. Addresses: README "Contract Details".
@@ -5,10 +7,15 @@
 export const RPC = "https://testnet-rpc.monad.xyz";
 export const EXPLORER = "https://testnet.monadexplorer.com";
 export const FAUCET = "https://faucet.monad.xyz";
-export const SPLITTER = "0x1A245Dc83F286CA5A6833626E813776623f9F336" as const; // TipSplitter: the team's tip pool
-export const AUSD = "0xcEF38D455529Dbc2e37654452C288C25e18ADea4" as const;     // Agora USD (test): 18 decimals
+/** TipSplitter (the team's tip pool); a redeployed pool is set with NEXT_PUBLIC_TIP_SPLITTER. */
+export const SPLITTER = TIP_SPLITTER;
+/** Agora USD (test), 18 decimals; set NEXT_PUBLIC_AUSD if a new pool uses a new token. */
+export const AUSD = (process.env.NEXT_PUBLIC_AUSD || "0xcEF38D455529Dbc2e37654452C288C25e18ADea4") as `0x${string}`;
 
-const SEL = { currentPolicy: "0xc7d29856", balanceOf: "0x70a08231", transfer: "0xa9059cbb", mint: "0x40c10f19" };
+const SEL = {
+  currentPolicy: "0xc7d29856", balanceOf: "0x70a08231", transfer: "0xa9059cbb", mint: "0x40c10f19",
+  owner: "0x8da5cb5b", agent: "0xf5ff5c76", registerEmployee: "0xf0b3410a",
+};
 const word = (hex: string) => hex.replace(/^0x/, "").padStart(64, "0");
 
 async function rpc<T>(method: string, params: unknown[]): Promise<T> {
@@ -30,6 +37,18 @@ export async function ausdBalance(owner: string) {
 }
 export async function monBalance(owner: string) {
   return BigInt(await rpc<string>("eth_getBalance", [owner, "latest"]));
+}
+
+/** Who runs the pool: only the owner or the agent may change the rule or register the team. */
+export async function readRoles() {
+  const [o, a] = await Promise.all([call(SPLITTER, SEL.owner), call(SPLITTER, SEL.agent)]);
+  const addr = (r: string) => ("0x" + r.slice(-40)).toLowerCase();
+  return { owner: addr(o), agent: addr(a) };
+}
+/** Whether the deployed pool has the team registry (registerEmployee / tipIndividual). */
+export async function supportsTeam() {
+  const code = await rpc<string>("eth_getCode", [SPLITTER, "latest"]);
+  return code.toLowerCase().includes(SEL.registerEmployee.slice(2));
 }
 
 /** Dollars (2 decimals) ⇄ AUSD base units (18 decimals). */

@@ -212,11 +212,6 @@ export default function TipFlow() {
     lowMon ? "Get MON for the network fee" :
     lowAusd ? `Add ${usd(TEST_DOLLARS)} test dollars & send` :
     `Send tip · ${amount}`;
-  const note =
-    message ??
-    (lowMon ? "MON pays the network fee. It's free from the Monad faucet." :
-     lowAusd && balance !== null ? `You have ${usd(balance, true)} in test dollars` :
-     "No platform cut · network fee applies · test dollars");
   const size = entry.length > 6 ? "s" : entry.length > 4 ? "m" : "l";
 
   return (
@@ -350,7 +345,8 @@ export default function TipFlow() {
                 </AnimatePresence>
               </span>
             </button>
-            <p className="pay-note" role="status">{note}</p>
+            {/* Only speaks up when something needs attention (cancelled, wrong network, an error). */}
+            {message && <p className="pay-note" role="status">{message}</p>}
           </motion.div>
         ) : (
           <motion.div key="done" className="pay-card pay-done" initial={{ opacity: 0, scale: reduce ? 1 : 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: reduce ? 0 : 0.35, ease: EASE }}>
