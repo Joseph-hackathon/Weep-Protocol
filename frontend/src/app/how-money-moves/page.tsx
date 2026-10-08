@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import DocPage, { REPO } from "../DocPage";
+import DocPage, { Part, REPO } from "../DocPage";
 
 export const metadata: Metadata = {
   title: "How money moves · Weep",
@@ -11,17 +11,6 @@ const EXPLORER = "https://testnet.monadexplorer.com";
 const SRC = `${REPO}/blob/main`;
 const PROOF_TX = "0x8be685ec1e20eee98010745c8bbcaf0fa10d1e08967bd1f811f1c9e5594e44e9";
 
-const contents = [
-  { id: "never-holds", label: "Weep never holds your money" },
-  { id: "send", label: "Sending to several people" },
-  { id: "amounts", label: "How amounts are worked out" },
-  { id: "guarantees", label: "What the code guarantees" },
-  { id: "email", label: "Money sent to an email" },
-  { id: "tips", label: "Tips and business pools" },
-  { id: "ai", label: "What the AI does, and doesn't" },
-  { id: "proof", label: "Check it yourself" },
-  { id: "limits", label: "Limits and risks" },
-];
 
 export default function Page() {
   return (
@@ -29,15 +18,14 @@ export default function Page() {
       path="/how-money-moves"
       title="How money moves"
       lead="What happens to your money on Weep, step by step, and what the code guarantees, so you can trust a payment without having to trust us."
-      contents={contents}
+      glance={[
+        { title: "Weep never holds your money.", text: "It goes from your wallet straight to each person." },
+        { title: "Exact to the cent.", text: "Code works out every share, and you approve it." },
+        { title: "Everyone, or no one.", text: "One payment pays everyone at once, or nobody at all." },
+        { title: "Check it yourself.", text: "Every payment links to its transaction on Monad." },
+      ]}
     >
-      <section id="never-holds">
-        <h2>Weep never holds your money</h2>
-        <p>Every payment goes from your wallet to the people you&apos;re paying, in a transaction you approve. Weep&apos;s website and servers can&apos;t move money from your wallet. Neither can the payment contract, except in a payment you sign. Weep runs on Monad testnet, so the dollars are a test token with no real-world value.</p>
-      </section>
-
-      <section id="send">
-        <h2>Sending to several people</h2>
+      <Part id="send" title="Sending to several people">
         <ol className="doc-steps">
           <li><strong>Describe it.</strong> Write who gets what, in your own words. For example: &ldquo;$60 to Sam, Ama and Kai, Sam gets half&rdquo;. You can also add people yourself.</li>
           <li><strong>Check it.</strong> Weep lists every person with their exact amount, worked out by Weep&apos;s own code. Change anything you like. If something doesn&apos;t add up, Weep says so and won&apos;t send.</li>
@@ -47,10 +35,9 @@ export default function Page() {
           <li><strong>Send once.</strong> One transaction pays everyone at the same moment.</li>
           <li><strong>Get your receipt.</strong> The receipt is read back from Monad: what actually reached each person, with a link to the transaction.</li>
         </ol>
-      </section>
+      </Part>
 
-      <section id="amounts">
-        <h2>How amounts are worked out</h2>
+      <Part id="amounts" title="How amounts are worked out">
         <p>Each person&apos;s share is a fixed amount, a percentage, or an equal share. Weep works out the cents the same way every time:</p>
         <ol>
           <li>Fixed amounts come first.</li>
@@ -59,10 +46,9 @@ export default function Page() {
           <li>Any leftover cents go one at a time to the first people on the list, and the review shows who got one.</li>
         </ol>
         <p>So $100 split three ways is $33.34, $33.33 and $33.33. The shares always add up to exactly the total. Nothing is rounded away. The rules are in <a href={`${SRC}/frontend/src/app/allocate.ts`} target="_blank" rel="noreferrer">allocate.ts</a>.</p>
-      </section>
+      </Part>
 
-      <section id="guarantees">
-        <h2>What the code guarantees</h2>
+      <Part id="guarantees" title="What the code guarantees">
         <p>The WeepPay contract enforces these rules on Monad itself, whatever any website sends it:</p>
         <div className="doc-table" role="region" aria-label="Guarantees enforced by WeepPay" tabIndex={0}>
           <table>
@@ -78,26 +64,23 @@ export default function Page() {
           </table>
         </div>
         <p>Read the contract: <a href={`${SRC}/contracts/contracts/WeepPay.sol`} target="_blank" rel="noreferrer">WeepPay.sol</a>. Its tests check each guarantee: <a href={`${SRC}/contracts/test/WeepPay.test.js`} target="_blank" rel="noreferrer">WeepPay.test.js</a>.</p>
-      </section>
+      </Part>
 
-      <section id="email">
-        <h2>Money sent to an email</h2>
+      <Part id="email" title="Money sent to an email">
         <p>Paying an email pays the wallet that Privy links to it, and Privy creates the wallet if the person doesn&apos;t have one yet. The money is in that wallet as soon as the payment confirms. There&apos;s nothing to claim. The person sees it by signing in to Weep with that email, which only they can do, because it takes a code sent to their inbox. Wallets made by Privy are non-custodial: neither Weep nor Privy can spend from them.</p>
         <p>Weep doesn&apos;t notify the people you pay, so tell them yourself. The same email always leads to the same wallet.</p>
-      </section>
+      </Part>
 
-      <section id="tips">
-        <h2>Tips and business pools</h2>
+      <Part id="tips" title="Tips and business pools">
         <ul>
           <li><strong>Tip a person by name.</strong> The tip goes straight from the guest to that person&apos;s wallet, 100%, through the pool contract&apos;s <code>tipIndividual</code>. It never sits in the pool.</li>
           <li><strong>Tip the whole team.</strong> The tip goes into the business&apos;s pool contract and waits there until the business pays out. The payout splits it between groups (floor, kitchen, bar) by the business&apos;s rule, and evenly within each group. A group with nobody in it passes its share to the others. A remainder smaller than a cent can stay in the pool, and it goes out with the next payout.</li>
           <li><strong>Who controls a pool.</strong> The wallet that owns the pool, plus any agent it names, sets the team, changes the split and starts payouts. Staff are trusting the business to pay out. Every team change and payout is public on Monad, so anyone can check it.</li>
         </ul>
         <p>Read the pool contract: <a href={`${SRC}/contracts/contracts/TipSplitter.sol`} target="_blank" rel="noreferrer">TipSplitter.sol</a>.</p>
-      </section>
+      </Part>
 
-      <section id="ai">
-        <h2>What the AI does, and doesn&apos;t</h2>
+      <Part id="ai" title="What the AI does, and doesn&apos;t">
         <p>Weep uses Google&apos;s Gemini models to read a description and draft the list of people. It uses the same approach to read a team description in the Merchant Portal.</p>
         <ul>
           <li><strong>It reads.</strong> It finds people, emails, wallets, the total, and whether each share is a fixed amount, a percentage or an equal share.</li>
@@ -107,10 +90,9 @@ export default function Page() {
           <li><strong>It doesn&apos;t make people up.</strong> If you say &ldquo;20 winners&rdquo; without naming them, it creates numbered rows and asks how to reach each person.</li>
         </ul>
         <p>On 8 October 2026 we tried 14 very different descriptions on the live site. They included a long paragraph with the amounts buried inside, &ldquo;2k&rdquo; and &ldquo;1.5k&rdquo;, &ldquo;fifty bucks&rdquo;, &ldquo;USD 1,250.75&rdquo;, fractions and percentages, emails only, raw wallet addresses, a misspelled name, 20 unnamed winners, a request with no total, and amounts that don&apos;t add up. Sent one at a time, all 14 were read correctly, and the last two produced a question instead of a guess. When all 14 were sent at once, 3 came back with &ldquo;Couldn&apos;t read that just now&rdquo; because the AI service was busy. Weep showed that message rather than a wrong draft. AI can still make mistakes, and that&apos;s why you check every amount before sending.</p>
-      </section>
+      </Part>
 
-      <section id="proof">
-        <h2>Check it yourself</h2>
+      <Part id="proof" title="Check it yourself">
         <div className="doc-table" role="region" aria-label="Weep contracts on Monad testnet" tabIndex={0}>
           <table>
             <thead><tr><th scope="col">Contract</th><th scope="col">Address on Monad testnet (chain 10143)</th></tr></thead>
@@ -123,10 +105,9 @@ export default function Page() {
         </div>
         <p>An example payment: on 8 October 2026, <a href={`${EXPLORER}/tx/${PROOF_TX}`} target="_blank" rel="noreferrer">one WeepPay transaction</a> paid $100.00 to three people, as $33.34, $33.33 and $33.33. Two were paid by email and one by wallet address. The sender was charged exactly $100.00, each person received exactly their share, and the contract kept nothing.</p>
         <p>Every payment in Weep links to its own transaction like this one, so you never need to take our word for it.</p>
-      </section>
+      </Part>
 
-      <section id="limits">
-        <h2>Limits and risks</h2>
+      <Part id="limits" title="Limits and risks">
         <ul>
           <li><strong>Payments can&apos;t be undone.</strong> Once Monad records a payment, only the person who received it can send it back.</li>
           <li><strong>Testnet only.</strong> Test dollars have no value. The network can be slow, reset or unavailable, and Weep&apos;s contracts may be replaced by new versions.</li>
@@ -137,7 +118,7 @@ export default function Page() {
           <li><strong>Services can fail.</strong> If Privy, the Gemini API or the Monad endpoint is down, signing in, reading descriptions or sending may not work until it&apos;s back. A payment either confirms in full or doesn&apos;t happen at all.</li>
         </ul>
         <p>See also the <Link href="/terms">Terms of use</Link> and the <Link href="/privacy">Privacy notice</Link>.</p>
-      </section>
+      </Part>
     </DocPage>
   );
 }

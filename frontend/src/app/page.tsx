@@ -26,7 +26,7 @@ export default function Home() {
         <Hero />
       </main>
 
-      <SiteFooter />
+      <SiteFooter legal />
     </>
   );
 }
