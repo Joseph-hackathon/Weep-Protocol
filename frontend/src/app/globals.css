@@ -1412,3 +1412,81 @@ a.e-feed-amount:hover { text-decoration: underline; text-underline-offset: 3px; 
   body:has(.tip-page) .site-footer { position: relative; }
 }
 
+
+/* ── Documents: Terms, Privacy, How money moves ────────────────────────────────────────────────────
+   One readable column (68ch) on the same dark canvas: 16/26 body, a single H1, H2 sections, tables that
+   scroll inside themselves on phones (never the page). The footer follows the text instead of floating over it. */
+body:has(.doc) .site-main { padding-bottom: var(--space-4); }
+body:has(.doc) .site-footer { position: relative; }
+.doc { padding-block: var(--space-8) var(--space-12); }
+.doc-article { max-width: var(--reading-max); margin-inline: auto; font-size: 16px; line-height: 26px; color: var(--text-secondary); }
+.doc-meta { font-size: 13px; line-height: 20px; color: var(--text-muted); }
+.doc-title { margin-top: var(--space-2); font-size: 32px; line-height: 40px; font-weight: 600; letter-spacing: -0.02em; color: var(--text-primary); text-wrap: balance; }
+.doc-lead { margin-top: var(--space-4); font-size: 18px; line-height: 28px; text-wrap: pretty; }
+@media (min-width: 600px) { .doc-title { font-size: 40px; line-height: 48px; } }
+.doc-article h2 { margin-top: var(--space-10); font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em; color: var(--text-primary); scroll-margin-top: var(--space-6); }
+.doc-article section > * + * { margin-top: var(--space-3); }
+.doc-article h2 + * { margin-top: var(--space-3); }
+.doc-article ul, .doc-article ol { padding-left: var(--space-6); }
+.doc-article ul { list-style: disc; }
+.doc-article ol { list-style: decimal; }
+.doc-article li + li { margin-top: var(--space-2); }
+.doc-article li::marker { color: var(--text-muted); }
+.doc-article strong, .doc-article th[scope="row"] { font-weight: 600; color: var(--text-primary); }
+.doc-article em { font-style: normal; color: var(--text-primary); }
+.doc-article a { color: var(--text-primary); text-decoration: underline; text-decoration-color: rgba(169, 150, 255, .5); text-underline-offset: 3px; overflow-wrap: anywhere; }
+.doc-article a:hover { text-decoration-color: var(--border-focus); }
+.doc-article code { font-family: var(--font-mono); font-size: 13px; color: var(--text-primary); overflow-wrap: anywhere; }
+.doc-steps > li::marker { font-weight: 600; color: var(--text-primary); }
+
+/* The short version: the layered summary at the top of a long document */
+.doc-glance { margin-top: var(--space-8); padding: var(--space-4) var(--space-5); border-radius: var(--radius-3); border: 1px solid var(--border-default); background: rgba(243, 240, 255, .03); }
+.doc-glance-title { font-size: 13px; line-height: 20px; font-weight: 600; color: var(--text-primary); }
+.doc-glance ul { margin-top: var(--space-2); }
+
+.doc-contents { margin-top: var(--space-6); border-block: 1px solid var(--border-subtle); font-size: 14px; line-height: 22px; }
+.doc-contents ol { margin-top: 0; }
+.doc-contents li + li { margin-top: var(--space-1); }
+.doc-contents a { color: var(--text-secondary); text-decoration: none; }
+.doc-contents a:hover { color: var(--text-primary); text-decoration: underline; }
+@media (min-width: 840px) { .doc-contents ol { columns: 2; column-gap: var(--space-8); } .doc-contents li { break-inside: avoid; } }
+
+.doc-table { margin-top: var(--space-4); overflow-x: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-3); }
+.doc-table:focus-visible { outline-offset: 2px; }
+.doc-table table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; line-height: 21px; }
+.doc-table th, .doc-table td { padding: var(--space-3) var(--space-4); text-align: left; vertical-align: top; }
+.doc-table thead th { font-size: 13px; font-weight: 600; color: var(--text-muted); background: rgba(243, 240, 255, .03); }
+.doc-table tbody tr { border-top: 1px solid var(--border-subtle); }
+.doc-table th[scope="row"] { width: 34%; }
+
+.doc-more { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); margin-top: var(--space-12); padding-top: var(--space-4); border-top: 1px solid var(--border-subtle); font-size: 14px; }
+.doc-more a { display: inline-flex; align-items: center; min-height: var(--control-md); color: var(--text-secondary); text-decoration: none; }
+.doc-more a:hover { color: var(--text-primary); }
+
+/* Sign-in window: one quiet line under the options, where agreeing actually happens */
+.cm-legal { margin-top: var(--space-1); font-size: 12px; line-height: 18px; color: var(--text-muted); text-align: center; text-wrap: balance; }
+.cm-legal a { color: var(--text-secondary); text-decoration: underline; text-decoration-color: rgba(243, 240, 255, .25); text-underline-offset: 2px; }
+.cm-legal a:hover { color: var(--text-primary); }
+/* Account menu: the documents, in small print under the actions */
+.panel-legal { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 var(--space-3); margin-top: var(--space-1); padding-top: var(--space-1); border-top: 1px solid var(--border-subtle); }
+.panel-legal a { display: inline-flex; align-items: center; min-height: 32px; font-size: 12px; color: var(--text-muted); text-decoration: none; }
+.panel-legal a:hover, .panel-legal a:focus-visible { color: var(--text-primary); }
+/* "On this page" folds away: one quiet row until it's wanted */
+.doc-contents summary { display: flex; align-items: center; gap: var(--space-2); min-height: var(--control-md); cursor: pointer; list-style: none; font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.doc-contents summary::-webkit-details-marker { display: none; }
+.doc-contents summary::after { content: ""; width: 7px; height: 7px; margin-left: var(--space-1); border-right: 1.5px solid var(--text-muted); border-bottom: 1.5px solid var(--text-muted); transform: translateY(-2px) rotate(45deg); transition: transform var(--motion-fast-2) var(--ease-standard); }
+.doc-contents[open] summary::after { transform: translateY(1px) rotate(225deg); }
+.doc-contents nav { padding-bottom: var(--space-2); }
+/* Phones: each table row becomes a short labelled block, so nothing scrolls sideways */
+@media (max-width: 599px) {
+  .doc-table { overflow: visible; }
+  .doc-table table { min-width: 0; }
+  .doc-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .doc-table tr, .doc-table th, .doc-table td { display: block; }
+  .doc-table tbody tr:first-child { border-top: 0; }
+  .doc-table tbody tr { padding: var(--space-3) var(--space-4); }
+  .doc-table th[scope="row"] { width: auto; padding: 0 0 var(--space-1); }
+  .doc-table td { padding: var(--space-1) 0 0; }
+  .doc-table td::before { content: attr(data-label); display: block; font-size: 12px; line-height: 18px; color: var(--text-muted); }
+  .doc-table td:only-of-type::before { content: none; }
+}

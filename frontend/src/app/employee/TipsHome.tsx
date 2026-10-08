@@ -10,7 +10,7 @@ import QrLink from "../QrLink";
 import { NAME_KEY, fromLabel, useReceived } from "../received";
 
 /**
- * Employee space (DOCS.md §4.2): sign in with the email the manager added (the wallet was created for
+ * Employee space: sign in with the email the manager added (the wallet was created for
  * them already), then see tips in dollars, live. Payouts are pushed to the wallet, so there is nothing
  * to claim; new arrivals are celebrated the moment the balance moves.
  */
