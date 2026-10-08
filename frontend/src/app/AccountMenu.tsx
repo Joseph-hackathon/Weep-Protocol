@@ -167,6 +167,12 @@ export default function AccountMenu(p: Props) {
               <LogOut size={20} strokeWidth={1.75} aria-hidden />
               <span>Disconnect</span>
             </button>
+
+            <div className="panel-legal">
+              <a role="menuitem" href="/terms" target="_blank" rel="noreferrer" onClick={() => close(false)}>Terms</a>
+              <a role="menuitem" href="/privacy" target="_blank" rel="noreferrer" onClick={() => close(false)}>Privacy</a>
+              <a role="menuitem" href="/how-money-moves" target="_blank" rel="noreferrer" onClick={() => close(false)}>How money moves</a>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

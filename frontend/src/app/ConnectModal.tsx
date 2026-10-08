@@ -265,6 +265,12 @@ export default function ConnectModal({ open, onClose, onAllWallets }: Props) {
                     </button>
                   </li>
                 </ul>
+
+                {/* New tab, so the sign-in in progress is never lost */}
+                <p className="cm-legal">
+                  By continuing, you agree to the <a href="/terms" target="_blank" rel="noreferrer">Terms</a> and
+                  confirm you&apos;ve read the <a href="/privacy" target="_blank" rel="noreferrer">Privacy notice</a>.
+                </p>
               </div>
             )}
 

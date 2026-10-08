@@ -496,6 +496,13 @@
 .powered-by:hover { color: var(--text-secondary); background: rgba(243, 240, 255, .04); }
 .powered-by-text { font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: .01em; }   /* caption role */
 .powered-by-logo { display: block; height: 16px; width: auto; }
+/* Landing only: the documents in small print either side of the credit, on the page margins */
+.site-footer.has-legal { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); column-gap: var(--space-2); align-items: center; padding-inline: max(var(--page-margin), env(safe-area-inset-left, 0px)); }
+.footer-legal { pointer-events: auto; display: flex; align-items: center; gap: var(--space-3); min-width: 0; padding-bottom: 0; }
+.footer-legal-start { justify-content: flex-start; }
+.footer-legal-end { justify-content: flex-end; }
+.footer-legal a { display: inline-flex; align-items: center; height: var(--footer-h); font-size: 12px; line-height: 16px; font-weight: 500; color: var(--text-muted); text-decoration: none; white-space: nowrap; transition: color var(--motion-fast-2) var(--ease-standard); }
+.footer-legal a:hover { color: var(--text-secondary); }
 
 /* ── Hero (manual §9.2: one proposition, one line, one primary action) ─────────────
    The words are centred in the open space; the flower (below) grows out of the footer.
@@ -1412,3 +1419,123 @@ a.e-feed-amount:hover { text-decoration: underline; text-underline-offset: 3px; 
   body:has(.tip-page) .site-footer { position: relative; }
 }
 
+
+/* ── Documents: Terms, Privacy, How money moves ────────────────────────────────────────────────────
+   One open reading column (640px, about 70ch at 16px), no card. Order: switch, title, effective date, lead,
+   the short version, numbered contents, then every section in full, divided by hairlines. From 1200px the
+   contents move into a 200px side rail that stays in view and marks the section being read. The footer follows the text. */
+body:has(.doc) .site-main { padding-bottom: var(--space-4); }
+body:has(.doc) .site-footer { position: relative; }
+.doc { padding-block: var(--space-8) var(--space-16); }
+.doc-layout { display: grid; grid-template-columns: minmax(0, 640px); justify-content: center; row-gap: var(--space-10); }
+.doc-label { font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+.doc-num { font-family: var(--font-mono); font-weight: 400; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+/* Head */
+.doc-head { display: flex; flex-direction: column; align-items: flex-start; }
+.doc-switch { margin: 0 0 var(--space-8); }
+.doc-switch .side-option { display: inline-flex; align-items: center; text-decoration: none; }
+.doc-switch .side-option[aria-current="page"] { color: var(--text-primary); }
+.doc-title { font-size: 30px; line-height: 38px; font-weight: 600; letter-spacing: -0.02em; color: var(--text-primary); }
+@media (min-width: 600px) { .doc-title { font-size: 36px; line-height: 44px; } }
+.doc-date { margin-top: var(--space-2); font-family: var(--font-mono); font-size: 12px; line-height: 16px; color: var(--text-muted); }
+.doc-lead { margin-top: var(--space-4); font-size: 18px; line-height: 28px; color: var(--text-secondary); text-wrap: pretty; }
+
+/* The short version: four plain statements, each a white line with one grey line of detail */
+.doc-glance ul { display: grid; gap: var(--space-5) var(--space-8); margin-top: var(--space-4); }
+@media (min-width: 600px) { .doc-glance ul { grid-template-columns: 1fr 1fr; } }
+.doc-glance li { display: flex; flex-direction: column; gap: var(--space-1); padding-top: var(--space-4); border-top: 1px solid var(--border-default); }
+.doc-glance strong { font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em; color: var(--text-primary); }
+.doc-glance span { font-size: 14px; line-height: 20px; color: var(--text-secondary); text-wrap: pretty; }
+
+/* Contents: a quiet panel, two columns from 600px */
+.doc-contents { padding: var(--space-4) var(--space-5); border-radius: var(--radius-4); background: rgba(243, 240, 255, .03); border: 1px solid var(--border-subtle); }
+.doc-contents ol { display: grid; gap: var(--space-1) var(--space-6); margin-top: var(--space-3); }
+@media (min-width: 600px) { .doc-contents ol { grid-template-columns: 1fr 1fr; } }
+.doc-contents a { display: grid; grid-template-columns: 24px minmax(0, 1fr); align-items: baseline; padding-block: var(--space-1); font-size: 14px; line-height: 20px; color: var(--text-secondary); text-decoration: none; transition: color var(--motion-fast-2) var(--ease-standard); }
+.doc-contents .doc-num { font-size: 12px; }
+.doc-contents a:hover, .doc-contents a[aria-current] { color: var(--text-primary); }
+
+/* Sections in full */
+.doc-section { padding-block: var(--space-6); border-top: 1px solid var(--border-subtle); scroll-margin-top: var(--space-6); }
+.doc-section:first-child { border-top: 0; padding-top: 0; }
+.doc-section h2 { display: flex; gap: var(--space-3); font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em; color: var(--text-primary); }
+.doc-body { margin-top: var(--space-3); font-size: 16px; line-height: 26px; color: var(--text-secondary); }
+.doc-body > * + * { margin-top: var(--space-3); }
+.doc-body ul, .doc-body ol { padding-left: var(--space-5); }
+.doc-body ul { list-style: disc; }
+.doc-body ol { list-style: decimal; }
+.doc-body li + li { margin-top: var(--space-2); }
+.doc-body li::marker { color: var(--text-muted); }
+.doc-steps > li::marker { font-variant-numeric: tabular-nums; }
+.doc-body strong, .doc-body em { font-style: normal; font-weight: 600; color: var(--text-primary); }
+.doc-body a, .doc-note a { color: var(--text-primary); text-decoration: underline; text-decoration-color: rgba(243, 240, 255, .3); text-underline-offset: 3px; overflow-wrap: anywhere; transition: text-decoration-color var(--motion-fast-2) var(--ease-standard); }
+.doc-body a:hover, .doc-note a:hover { text-decoration-color: var(--text-primary); }
+.doc-body code { font-family: var(--font-mono); font-size: 13px; color: var(--text-primary); overflow-wrap: anywhere; }
+.doc-note { padding-top: var(--space-6); border-top: 1px solid var(--border-subtle); font-size: 13px; line-height: 20px; color: var(--text-muted); }
+
+/* Tables: a quiet panel; on phones each row becomes a short labelled block, so nothing scrolls sideways */
+.doc-table { overflow-x: auto; border-radius: var(--radius-3); background: rgba(243, 240, 255, .03); border: 1px solid var(--border-subtle); }
+.doc-table table { width: 100%; min-width: 520px; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.doc-table th, .doc-table td { padding: var(--space-3) var(--space-4); text-align: left; vertical-align: top; }
+.doc-table thead th { font-size: 12px; line-height: 16px; font-weight: 600; color: var(--text-muted); }
+.doc-table tbody tr { border-top: 1px solid var(--border-subtle); }
+.doc-table th[scope="row"] { width: 30%; font-weight: 600; color: var(--text-primary); }
+.doc-table td { color: var(--text-secondary); }
+@media (max-width: 599px) {
+  .doc-table { overflow: visible; }
+  .doc-table table { min-width: 0; }
+  .doc-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .doc-table tr, .doc-table th, .doc-table td { display: block; }
+  .doc-table tbody tr:first-child { border-top: 0; }
+  .doc-table tbody tr { padding: var(--space-3) var(--space-4); }
+  .doc-table th[scope="row"] { width: auto; padding: 0 0 var(--space-1); }
+  .doc-table td { padding: var(--space-1) 0 0; }
+  .doc-table td::before { content: attr(data-label); display: block; font-size: 12px; line-height: 16px; color: var(--text-muted); }
+  .doc-table td:only-of-type::before { content: none; }
+}
+
+/* Wide screens: contents become a side rail beside the text, in view while reading */
+@media (min-width: 1200px) {
+  .doc-layout { grid-template-columns: 200px minmax(0, 640px); column-gap: var(--space-16); }
+  .doc-head, .doc-glance, .doc-sections { grid-column: 2; }
+  .doc-head { grid-row: 1; }
+  .doc-glance { grid-row: 2; }
+  .doc-sections { grid-row: 3; }
+  .doc-contents {
+    grid-column: 1; grid-row: 1 / span 3; align-self: start; position: sticky; top: var(--space-6);
+    padding: 0; background: none; border: 0; border-radius: 0;
+  }
+  .doc-contents ol { grid-template-columns: 1fr; gap: 0; margin-top: var(--space-3); border-left: 1px solid var(--border-subtle); }
+  .doc-contents a { grid-template-columns: 1fr; margin-left: -1px; padding: 6px 0 6px var(--space-4); font-size: 13px; line-height: 18px; color: var(--text-muted); border-left: 1px solid transparent; }
+  .doc-contents .doc-num { display: none; }
+  .doc-contents a:hover { color: var(--text-secondary); }
+  .doc-contents a[aria-current] { color: var(--text-primary); border-left-color: var(--text-primary); }
+}
+
+/* Sign-in window: one quiet line under the options, where agreeing actually happens */
+.cm-legal { margin-top: var(--space-1); font-size: 12px; line-height: 18px; color: var(--text-muted); text-align: center; text-wrap: balance; }
+.cm-legal a { color: var(--text-secondary); text-decoration: underline; text-decoration-color: rgba(243, 240, 255, .25); text-underline-offset: 2px; }
+.cm-legal a:hover { color: var(--text-primary); }
+/* Account menu: the documents, in small print under the actions */
+.panel-legal { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 var(--space-3); margin-top: var(--space-1); padding-top: var(--space-1); border-top: 1px solid var(--border-subtle); }
+.panel-legal a { display: inline-flex; align-items: center; min-height: 32px; font-size: 12px; color: var(--text-muted); text-decoration: none; }
+.panel-legal a:hover, .panel-legal a:focus-visible { color: var(--text-primary); }
+.footer-legal .footer-legal-narrow { display: none; }
+@media (max-width: 419px) { .footer-legal .footer-legal-wide { display: none; } .footer-legal .footer-legal-narrow { display: inline-flex; } }
+/* Phones: one step down the type scale for the documents and the landing links, so nothing reads oversized.
+   Reading text stays 16px (comfortable, and iOS won't zoom). */
+@media (max-width: 599px) {
+  .footer-legal a { font-size: 11px; letter-spacing: .01em; }
+  .doc { padding-block: var(--space-6) var(--space-12); }
+  .doc-layout { row-gap: var(--space-8); }
+  .doc-switch { margin-bottom: var(--space-6); }
+  .doc-title { font-size: 26px; line-height: 32px; }
+  .doc-lead { margin-top: var(--space-3); font-size: 16px; line-height: 24px; }
+  .doc-section { padding-block: var(--space-5); }
+  .doc-section h2 { font-size: 18px; line-height: 26px; gap: var(--space-2); }
+  .doc-body { line-height: 24px; }
+  .doc-glance strong { font-size: 15px; line-height: 22px; }
+  .doc-contents { padding: var(--space-3) var(--space-4); }
+  .doc-contents a { font-size: 13px; line-height: 18px; }
+}

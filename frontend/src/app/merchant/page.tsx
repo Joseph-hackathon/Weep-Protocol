@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Merchant Portal · Weep" };
 // resizes-content: on phones the page shrinks above the keyboard while the merchant types.
 export const viewport: Viewport = { themeColor: "#040208", viewportFit: "cover", interactiveWidget: "resizes-content" };
 
-/** Merchant space: set up the team and the tip rule in one prompt (DOCS.md §4.3). */
+/** Merchant space: set up the team and the tip rule in one prompt. */
 export default function Page() {
   return (
     <>

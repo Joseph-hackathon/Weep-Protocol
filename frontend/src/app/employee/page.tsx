@@ -6,7 +6,7 @@ import TipsHome from "./TipsHome";
 export const metadata: Metadata = { title: "Your tips · Weep" };
 export const viewport: Viewport = { themeColor: "#040208", viewportFit: "cover" };
 
-/** Employee space: sign in with email and see tips arrive, live (DOCS.md §4.2). */
+/** Employee space: sign in with email and see tips arrive, live. */
 export default function Page() {
   return (
     <>

@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Leave a tip · Weep" };
 // resizes-content: if a phone keyboard ever opens, the page shrinks above it instead of being covered.
 export const viewport: Viewport = { themeColor: "#040208", viewportFit: "cover", interactiveWidget: "resizes-content" };
 
-/** Customer space: where a table QR code or a tip link lands (DOCS.md §4.1). */
+/** Customer space: where a table QR code or a tip link lands. */
 export default function Page() {
   return (
     <>

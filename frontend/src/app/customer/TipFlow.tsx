@@ -11,7 +11,7 @@ import {
 } from "../chain";
 
 /**
- * Customer space (DOCS.md §4.1) as one payment card, on live Monad testnet data.
+ * Customer space as one payment card, on live Monad testnet data.
  *   Amount first: typed straight in (keypad on phones, keyboard on desktop), digits pop as they land.
  *   Route second: one bar shows exactly where the money goes — the live rule read from TipSplitter
  *   (the merchant sets it in plain words; AI turns it into these percentages; it can change anytime).

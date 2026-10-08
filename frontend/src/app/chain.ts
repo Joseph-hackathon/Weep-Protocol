@@ -2,7 +2,7 @@ import { TIP_SPLITTER } from "./setup-message";
 
 /**
  * Read-only access to Weep on Monad testnet with plain JSON-RPC (no wallet library, ~1 KB), plus the
- * call data for the transactions the customer can make. Addresses: README "Contract Details".
+ * call data for the transactions the customer can make. Addresses: README "Contracts".
  */
 export const RPC = process.env.NEXT_PUBLIC_MONAD_RPC || "https://testnet-rpc.monad.xyz";
 export const EXPLORER = "https://testnet.monadexplorer.com";

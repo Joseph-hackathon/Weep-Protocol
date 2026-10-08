@@ -7,7 +7,7 @@ export type RoleId = "merchant" | "employee" | "customer"; // the slot; also the
 export type Side = "individual" | "business";
 
 type Card = { href: string; title: string; line: string; chip: string };
-/** `chip`: a small live detail on each card's photo, straight from the product (DOCS.md §3–4). */
+/** `chip`: a small live detail on each card's photo, straight from the product. */
 export const ROLES: { id: RoleId; img: string; individual: Card; business: Card }[] = [
   {
     id: "merchant", img: "/hero/kitchen.jpg",
