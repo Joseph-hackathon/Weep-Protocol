@@ -54,6 +54,14 @@ export default function SendFlow() {
   const address = wallet.address;
   const [stage, setStage] = useState<Stage>("say");
   const [text, setText] = useState("");
+  // Anything typed in the first moment of a slow load, before the page took over, is kept and counted.
+  const say = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const typed = say.current?.value ?? "";
+    if (!typed) return;
+    const t = setTimeout(() => setText((v) => v || typed), 0);
+    return () => clearTimeout(t);
+  }, []);
   const [reading, setReading] = useState(false);
   const [readError, setReadError] = useState<string | null>(null);
   const [total, setTotal] = useState("");
@@ -238,7 +246,7 @@ export default function SendFlow() {
             <h1 className="m-ask">Who are you paying?</h1>
             <div className={`m-composer${reading ? " is-busy" : ""}`}>
               <label className="sr-only" htmlFor="s-text">Who you&apos;re paying, and how much</label>
-              <textarea id="s-text" className="m-input" rows={5} value={text} maxLength={6000} disabled={reading}
+              <textarea ref={say} id="s-text" className="m-input" rows={5} value={text} maxLength={6000} disabled={reading}
                 placeholder={"$60 to Sam, Ama and Kai. Sam gets half.\nsam@mail.com, ama@mail.com, kai@mail.com"}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && text.trim()) read(); }} />
