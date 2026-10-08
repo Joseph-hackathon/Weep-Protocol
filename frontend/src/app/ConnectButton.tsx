@@ -205,7 +205,7 @@ export default function ConnectButton({ openOnMount = false }: { openOnMount?: b
           type="button"
           className="btn-connect"
           onClick={openModal}
-          aria-busy={settingUp || !ready}
+          aria-busy={settingUp || undefined}
           disabled={settingUp}
           aria-haspopup="dialog"
         >

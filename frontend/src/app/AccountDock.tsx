@@ -13,7 +13,8 @@ import { useEffect, useState } from "react";
  * A first-time visitor never downloads it just to look. Until it arrives, a Connect button that is
  * pixel-identical to the real signed-out one holds the slot; a press opens the sign-in window on arrival.
  */
-const AccountArea = dynamic(() => import("./AccountArea"), { ssr: false, loading: () => <Placeholder /> });
+// A failed download (a dropped connection) is tried once more instead of leaving the slot waiting.
+const AccountArea = dynamic(() => import("./AccountArea").catch(() => import("./AccountArea")), { ssr: false, loading: () => <Placeholder /> });
 
 let pressedEarly = false; // survives the placeholder → real button swap
 
@@ -38,6 +39,7 @@ function Placeholder({ onWant }: { onWant?: (open: boolean) => void }) {
       aria-busy={pressedEarly || undefined}
     >
       <span className="btn-label">Connect</span>
+      {pressedEarly && <span className="btn-spinner" aria-hidden />}
     </button>
   );
 }

@@ -99,3 +99,37 @@ export async function waitForReceipt(hash: string, timeoutMs = 90000) {
   }
   throw new Error("Still waiting for the network. Check the explorer in a moment.");
 }
+
+/** One transfer of test dollars, as recorded on Monad. */
+export type Moved = { from: string; to: string; units: bigint; hash: string; block: number };
+const TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+type Log = { address: string; topics: string[]; data: string; transactionHash: string; blockNumber: string };
+const moved = (l: Log): Moved => ({ from: "0x" + l.topics[1].slice(-40), to: "0x" + l.topics[2].slice(-40), units: BigInt(l.data), hash: l.transactionHash, block: Number(BigInt(l.blockNumber)) });
+
+/** What a confirmed transaction actually moved out of `from`: every test-dollar transfer in its receipt. */
+export async function transfersIn(hash: string, from: string): Promise<Moved[]> {
+  const r = await rpc<{ logs: Log[] } | null>("eth_getTransactionReceipt", [hash]);
+  const sender = "0x" + word(from.toLowerCase());
+  return (r?.logs ?? [])
+    .filter((l) => l.address.toLowerCase() === AUSD.toLowerCase() && l.topics[0] === TRANSFER && l.topics[1]?.toLowerCase() === sender)
+    .map(moved);
+}
+
+/**
+ * Test dollars that reached `to` in the last ~100 blocks (the public RPC's search limit, under a minute on
+ * Monad), newest first: amount, sender and transaction for each. Polled while a page is open.
+ */
+export async function receivedRecently(to: string): Promise<(Moved & { at: number })[]> {
+  const head = Number(BigInt(await rpc<string>("eth_blockNumber", [])));
+  const logs = await rpc<Log[]>("eth_getLogs", [{
+    address: AUSD, fromBlock: "0x" + Math.max(0, head - 99).toString(16), toBlock: "0x" + head.toString(16),
+    topics: [TRANSFER, null, "0x" + word(to.toLowerCase())],
+  }]);
+  // When each one happened, as recorded on Monad (one lookup per block, not per payment).
+  const blocks = [...new Set(logs.map((l) => l.blockNumber))];
+  const times = new Map(await Promise.all(blocks.map(async (b) => {
+    const blk = await rpc<{ timestamp: string } | null>("eth_getBlockByNumber", [b, false]).catch(() => null);
+    return [b, blk ? Number(BigInt(blk.timestamp)) * 1000 : Date.now()] as const;
+  })));
+  return logs.map((l) => ({ ...moved(l), at: times.get(l.blockNumber) ?? Date.now() })).reverse();
+}
