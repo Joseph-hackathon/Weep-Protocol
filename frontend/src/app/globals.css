@@ -1523,3 +1523,19 @@ body:has(.doc) .site-footer { position: relative; }
 .panel-legal a:hover, .panel-legal a:focus-visible { color: var(--text-primary); }
 .footer-legal .footer-legal-narrow { display: none; }
 @media (max-width: 419px) { .footer-legal .footer-legal-wide { display: none; } .footer-legal .footer-legal-narrow { display: inline-flex; } }
+/* Phones: one step down the type scale for the documents and the landing links, so nothing reads oversized.
+   Reading text stays 16px (comfortable, and iOS won't zoom). */
+@media (max-width: 599px) {
+  .footer-legal a { font-size: 11px; letter-spacing: .01em; }
+  .doc { padding-block: var(--space-6) var(--space-12); }
+  .doc-layout { row-gap: var(--space-8); }
+  .doc-switch { margin-bottom: var(--space-6); }
+  .doc-title { font-size: 26px; line-height: 32px; }
+  .doc-lead { margin-top: var(--space-3); font-size: 16px; line-height: 24px; }
+  .doc-section { padding-block: var(--space-5); }
+  .doc-section h2 { font-size: 18px; line-height: 26px; gap: var(--space-2); }
+  .doc-body { line-height: 24px; }
+  .doc-glance strong { font-size: 15px; line-height: 22px; }
+  .doc-contents { padding: var(--space-3) var(--space-4); }
+  .doc-contents a { font-size: 13px; line-height: 18px; }
+}
