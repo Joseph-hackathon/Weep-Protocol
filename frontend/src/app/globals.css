@@ -283,7 +283,8 @@
 
 /* Connect loading state: spinner sits where the label was, so the button keeps its width */
 .btn-connect { position: relative; }
-.btn-connect[aria-busy="true"] .btn-label { visibility: hidden; }
+/* The label only gives way to a spinner that is actually showing, so the button is never an empty pill. */
+.btn-connect:has(.btn-spinner) .btn-label { visibility: hidden; }
 .btn-connect:disabled { cursor: progress; }
 .btn-spinner {
   position: absolute; inset: 0; margin: auto; width: 16px; height: 16px;
@@ -619,7 +620,7 @@ html[data-settle="true"] .powered-by-logo { filter: drop-shadow(0 0 8px rgba(131
 @keyframes role-surface-in { from { opacity: 0; } }
 .role-card:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 4px; }
 .role-photo {
-  position: relative; width: 100%; aspect-ratio: 4 / 5; border-radius: var(--radius-3); overflow: hidden;
+  position: relative; width: 100%; aspect-ratio: var(--photo-ratio, 0.8); border-radius: var(--radius-3); overflow: hidden;
   box-shadow: 0 0 0 1px rgba(243, 240, 255, .10), 0 24px 48px -16px rgba(0, 0, 0, .85);
   transition: box-shadow var(--motion-medium-2) var(--ease-standard);
 }
@@ -641,29 +642,36 @@ html[data-settle="true"] .powered-by-logo { filter: drop-shadow(0 0 8px rgba(131
   .chooser-grid { margin-top: var(--space-6); gap: var(--space-2); }
   .role-card { grid-template-columns: 48px 1fr 20px; }
 }
-@media (max-width: 599px) and (max-height: 600px) { .role-line { display: none; } }
+@media (max-width: 599px) and (max-height: 600px) { .role-line { display: none; } .chooser-sub { display: none; } }
 
 @media (min-width: 600px) {
   .chooser-grid {
     --cols: 6;
     --col: calc((100cqw - (var(--grid-columns) - 1) * var(--grid-gutter)) / var(--grid-columns));
     --span: calc(var(--cols) * var(--col) + (var(--cols) - 1) * var(--grid-gutter));
-    /* Height cap: header, words, card text and footer lane take ~420px; the photos get the rest. */
-    width: min(var(--span), calc((100dvh - 420px) * .8 * 3 + 2 * var(--grid-gutter)));
+    /* Height cap: header, title, switch, words, card text and footer take --chooser-rest; the photos get the rest. */
+    width: min(var(--span), calc((100dvh - var(--chooser-rest)) * var(--photo-ratio, 0.8) * 3 + 2 * var(--grid-gutter)));
     margin-top: var(--space-10);
     display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--grid-gutter);
   }
-  .role-card { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-4); padding: 0; }
+  .role-card { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-4); padding: 0; container-type: inline-size; }
   .role-card::before { display: none; }
   .role-photo { border-radius: var(--radius-4); }
   .role-chevron { display: none; }
+  /* Hover says "this opens": the outline lights up. Nothing moves. */
   @media (hover: hover) {
-    .role-card:hover { translate: 0 -4px; }
     .role-card:hover .role-photo { box-shadow: 0 0 0 1px rgba(196, 170, 255, .5), 0 0 40px -8px rgba(124, 77, 255, .6), 0 24px 48px -16px rgba(0, 0, 0, .85); }
   }
-  .role-card:active { translate: 0 -2px; }
+  .role-card:focus-visible .role-photo { box-shadow: 0 0 0 2px var(--border-focus); }
 }
 @media (min-width: 840px) { .chooser-grid { --cols: 8; } }
+/* Laptops and desktops: the chooser uses the lane kept for the removed island, as short phones already do. */
+@media (min-width: 600px) { .chooser { --chooser-rest: 440px; margin-bottom: calc(-1 * (var(--island-h) + var(--space-4))); } }
+/* Short laptop screens: less empty space around the cards first, then the cards ease down a touch. */
+@media (min-width: 600px) and (max-height: 820px) {
+  .chooser { --chooser-rest: 456px; --photo-ratio: 1; padding-block: var(--space-4); }
+  .chooser-grid { margin-top: var(--space-6); }
+}
 
 /* Secondary button: same geometry as the primary, quieter surface (manual §8.1: one primary per view). */
 .btn-secondary {
@@ -676,7 +684,7 @@ html[data-settle="true"] .powered-by-logo { filter: drop-shadow(0 0 8px rgba(131
 .btn-secondary:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .role-card, .role-card::before, .role-chevron, .role-photo { transition: none; animation: none; } }
 
-/* ── Motion layer: kinetic type, rises, sheen, halo, floor, card tilt ─────────────────
+/* ── Motion layer: kinetic type, rises, sheen, halo, floor ─────────────────
    Everything here animates transform/opacity (or a tiny text background), never a live blur or a
    full-screen blend — it composites on the GPU and stays at 60 fps on modest phones. */
 
@@ -746,28 +754,10 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
 }
 @keyframes chip-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
 
-/* Desktop cards: tilt toward the pointer, a glare that follows it, and a light ring. Hover devices only. */
-.role-glare { display: none; }
-@media (min-width: 600px) and (hover: hover) {
-  .role-card {
-    --rx: 0deg; --ry: 0deg; --gx: 50%; --gy: 0%;
-    transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry));
-    transition: transform 450ms cubic-bezier(.2, .8, .2, 1), translate var(--motion-medium-2) var(--ease-standard);
-  }
-  .role-card:hover { transition: transform 120ms linear, translate var(--motion-medium-2) var(--ease-standard); }
-  .role-glare {
-    display: block; position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0;
-    background: radial-gradient(circle at var(--gx) var(--gy), rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 55%);
-    transition: opacity var(--motion-medium-2) var(--ease-standard);
-  }
-  .role-card:hover .role-glare { opacity: 1; }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .kinetic-inner, .kinetic-accent, .rise, .chooser-floor, .role-chip, .role-chip-dot { animation: none !important; }
   .kinetic-accent { background: none; color: inherit; }
   .flower::before { transition: none; }
-  .role-card { transform: none !important; }
 }
 
 /* ── Customer: the payment card (/customer) ────────────────────────────────────────
@@ -1209,7 +1199,8 @@ a.m-wallet:hover { text-decoration: underline; text-underline-offset: 3px; }
 .e-feed { margin: 0; padding: 0; list-style: none; }
 .e-feed li { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; overflow: hidden; }
 .e-feed li + li { border-top: 1px solid var(--pay-line-soft); }
-.e-feed-amount { font-size: 15px; font-weight: 600; color: var(--pay-lime); font-variant-numeric: tabular-nums; }
+.e-feed-amount { font-size: 15px; font-weight: 600; color: var(--pay-lime); font-variant-numeric: tabular-nums; text-decoration: none; }
+a.e-feed-amount:hover { text-decoration: underline; text-underline-offset: 3px; }
 .e-feed-when { font-size: 12px; color: #8b8598; }
 .e-all { align-self: center; display: inline-flex; align-items: center; gap: 4px; height: 32px; font-size: 13px; font-weight: 600; color: #a1a1aa; text-decoration: none; }
 .e-all:hover { color: #fff; }
@@ -1223,3 +1214,194 @@ a.m-wallet:hover { text-decoration: underline; text-underline-offset: 3px; }
   .e-title { font-size: 24px; line-height: 30px; }
 }
 @media (prefers-reduced-motion: reduce) { .m-spin { animation: none; } .m-send { transition: none; } }
+
+/* Individual · Business: one quiet switch; the cards keep their photos and only the words change. */
+.side-switch { position: relative; display: inline-flex; gap: var(--space-1); margin-top: var(--space-4); padding: var(--space-1); border-radius: var(--radius-full); background: rgba(243, 240, 255, .05); border: 1px solid var(--border-subtle); }
+.side-option { position: relative; height: 36px; padding: 0 var(--space-4); border: 0; border-radius: var(--radius-full); background: transparent; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--text-secondary); transition: color var(--motion-fast-2) var(--ease-standard); -webkit-tap-highlight-color: transparent; }
+.side-option::before { content: ""; position: absolute; inset: -4px 0; }
+.side-option[aria-checked="true"] { color: var(--text-primary); }
+.side-option:hover { color: var(--text-primary); }
+.side-option:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
+.side-thumb { position: absolute; inset: 0; border-radius: inherit; background: rgba(243, 240, 255, .1); box-shadow: inset 0 0 0 1px rgba(243, 240, 255, .08); }
+.side-label { position: relative; }
+.chooser-sub-text { display: inline-block; }
+.role-words { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+@media (max-width: 599px) and (max-height: 700px) { .side-switch { margin-top: var(--space-3); } .side-option { height: 32px; } }
+
+/* ── Individual side: Send, My money, Tip. Same card, same type, same lime; laid out for one person. ── */
+.i-byhand { margin-top: calc(-1 * var(--space-2)); color: #d4d4d8; }
+.m-add { display: inline-flex; align-items: center; gap: var(--space-2); align-self: flex-start; padding: 0; color: var(--pay-lime); }
+.m-add:hover { color: #c5f3ad; }
+.m-add:disabled { opacity: .5; cursor: default; }
+
+/* Send · the total */
+.i-total { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-3); background: var(--pay-well); border: 1px solid var(--pay-well-line); transition: border-color var(--motion-fast-2) var(--ease-standard), box-shadow var(--motion-fast-2) var(--ease-standard); }
+.i-total:focus-within { border-color: rgba(162, 233, 128, .55); box-shadow: 0 0 0 3px rgba(162, 233, 128, .1); }
+.i-total-label { font-size: 13px; font-weight: 600; color: #a1a1aa; }
+.i-total-field { display: inline-flex; align-items: baseline; justify-content: flex-end; gap: var(--space-1); min-width: 0; font-size: 30px; line-height: 38px; font-weight: 600; letter-spacing: -0.02em; color: #fff; }
+.i-total-field > span { color: var(--pay-lime); font-size: 20px; }
+.i-total-field input { width: 4ch; max-width: 9ch; min-width: 0; padding: 0; border: 0; outline: 0; background: transparent; font: inherit; color: inherit; text-align: left; font-variant-numeric: tabular-nums; }
+.i-total-field input::placeholder { color: #4a4458; }
+
+/* Send · one row per person: who, how their part is set, what they get */
+.i-rows { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; max-height: min(46vh, 520px); overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; margin-inline: calc(-1 * var(--space-1)); padding-inline: var(--space-1); }
+.i-row { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto 24px; grid-template-areas: "av who amt x" ". rule rule ."; align-items: center; column-gap: var(--space-3); row-gap: var(--space-2); padding: var(--space-3) 0; }
+.i-row + .i-row { border-top: 1px solid var(--pay-line-soft); }
+.i-avatar { grid-area: av; display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--radius-full); font-size: 12px; font-weight: 600; color: var(--pay-ink); background: var(--pay-lime); }
+.i-row:nth-child(3n + 2) .i-avatar { background: var(--pay-lilac); }
+.i-row:nth-child(3n + 3) .i-avatar { color: #fff; background: var(--pay-violet); }
+.i-who { grid-area: who; display: flex; flex-direction: column; min-width: 0; }
+.i-name, .i-contact, .i-value { min-width: 0; padding: 0; border: 0; border-bottom: 1px solid transparent; border-radius: 0; outline: 0; background: transparent; font: inherit; color: #fff; transition: border-color var(--motion-fast-2) var(--ease-standard); }
+.i-name { font-size: 15px; line-height: 20px; font-weight: 600; }
+.i-contact { font-size: 14px; line-height: 20px; color: #a1a1aa; }
+.i-name::placeholder, .i-contact::placeholder, .i-value::placeholder { color: #4a4458; font-weight: 400; }
+.i-name:focus, .i-contact:focus, .i-value:focus { border-bottom-color: rgba(162, 233, 128, .6); }
+.i-contact.is-missing { color: #fcd34d; }
+.i-contact.is-missing::placeholder { color: #a8893a; }
+.i-amount { grid-area: amt; display: flex; flex-direction: column; align-items: flex-end; font-variant-numeric: tabular-nums; }
+.i-amount b { font-size: 15px; line-height: 20px; font-weight: 600; color: #fff; }
+.i-amount small { font-size: 11px; line-height: 16px; color: #8b8598; white-space: nowrap; }
+.i-row > .m-remove { grid-area: x; }
+.i-rule { grid-area: rule; display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.i-modes { display: inline-flex; padding: 1px; border-radius: var(--radius-full); background: var(--pay-well); border: 1px solid var(--pay-line); }
+.i-mode { position: relative; min-width: 40px; height: 28px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-full); background: transparent; color: #a1a1aa; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: background-color var(--motion-fast-2) var(--ease-standard), color var(--motion-fast-2) var(--ease-standard); }
+.i-mode::before { content: ""; position: absolute; inset: -8px 0; }
+.i-mode[aria-checked="true"] { color: var(--pay-ink); background: var(--pay-lime); }
+.i-mode:not([aria-checked="true"]):hover { color: #fff; }
+.i-mode:focus-visible { outline: 2px solid var(--pay-lime); outline-offset: 2px; }
+.i-value { width: 8ch; height: 32px; padding: 0 var(--space-2); border: 1px solid var(--pay-line); border-radius: var(--radius-2); background: var(--pay-well); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.i-value:focus { border-color: rgba(162, 233, 128, .6); }
+.i-add { margin-top: calc(-1 * var(--space-2)); }
+
+/* Send · does it add up */
+.i-sum { padding: var(--space-2) var(--space-3); border-radius: var(--radius-3); font-size: 14px; line-height: 20px; color: var(--pay-lime); background: rgba(162, 233, 128, .08); border: 1px solid rgba(162, 233, 128, .22); }
+.i-sum > span { display: flex; align-items: flex-start; gap: var(--space-2); }
+.i-sum svg { flex: none; margin-top: 3px; }
+.i-sum.is-off { color: #fcd34d; background: rgba(252, 211, 77, .07); border-color: rgba(252, 211, 77, .25); }
+.i-questions { padding: var(--space-3); border-radius: var(--radius-3); background: rgba(252, 211, 77, .07); border: 1px solid rgba(252, 211, 77, .25); }
+.i-questions-head { font-size: 12px; font-weight: 600; color: #fcd34d; }
+.i-questions ul { margin: var(--space-2) 0 0; padding-left: var(--space-4); font-size: 14px; line-height: 20px; color: #f5e9c4; }
+.i-questions .m-text-btn { height: 32px; margin-top: var(--space-1); padding: 0; color: #fcd34d; }
+.m-warn a { color: inherit; font-weight: 600; text-underline-offset: 3px; }
+
+/* Send · the receipt: each transfer, from the transaction itself */
+.i-proof { width: 100%; display: flex; flex-direction: column; margin: 0; padding: 0 var(--space-2) 0 0; list-style: none; max-height: 260px; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; text-align: left; }
+.i-proof li { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto auto; align-items: center; gap: var(--space-2); min-height: 44px; }
+.i-proof li + li { border-top: 1px solid var(--pay-line-soft); }
+.i-proof-check { display: grid; place-items: center; width: 20px; height: 20px; border-radius: var(--radius-full); color: var(--pay-ink); background: var(--pay-lime); }
+.i-proof-name { font-size: 14px; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.i-proof-wallet { font-family: var(--font-geist-mono), ui-monospace, monospace; font-size: 11px; color: #8b8598; text-decoration: none; }
+.i-proof-wallet:hover { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+.i-proof-amount { font-size: 14px; font-weight: 600; color: var(--pay-lime); font-variant-numeric: tabular-nums; }
+@media (max-width: 379px) { .i-proof-wallet { display: none; } .i-proof li { grid-template-columns: 20px minmax(0, 1fr) auto; } }
+.pay-done .m-link { justify-content: center; }
+
+/* My money */
+.i-chip-amount { font-weight: 600; color: var(--pay-lime); font-variant-numeric: tabular-nums; }
+.i-section { margin-bottom: 4px; font-size: 12px; line-height: 16px; font-weight: 600; color: #a1a1aa; }
+.i-received { margin: 0; padding: 0; list-style: none; max-height: 220px; overflow-y: auto; scrollbar-width: thin; }
+.i-received li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--space-3); min-height: 44px; overflow: hidden; }
+.i-received li + li { border-top: 1px solid var(--pay-line-soft); }
+.i-received-from { font-size: 14px; color: #d4d4d8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.i-received-from a { font-family: var(--font-geist-mono), ui-monospace, monospace; font-size: 12px; color: #fff; text-decoration: none; }
+.i-received-from a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.i-received-when { font-size: 11px; color: #8b8598; white-space: nowrap; }
+.i-received-amount { font-size: 15px; font-weight: 600; color: var(--pay-lime); font-variant-numeric: tabular-nums; text-decoration: none; }
+.i-received-amount:hover { text-decoration: underline; text-underline-offset: 3px; }
+.i-empty { display: flex; align-items: center; min-height: 44px; padding: var(--space-2) var(--space-3); border-radius: var(--radius-2); border: 1px dashed var(--pay-line); font-size: 14px; line-height: 20px; color: #8b8598; }
+.i-field { display: flex; flex-direction: column; gap: var(--space-2); }
+.i-field-label { font-size: 12px; line-height: 16px; font-weight: 500; color: #a1a1aa; }
+.i-field-input { height: 44px; padding: 0 var(--space-4); border-radius: var(--radius-3); border: 1px solid var(--pay-line); background: var(--pay-well); color: #fff; font: inherit; font-size: 16px; font-weight: 600; outline: 0; transition: border-color var(--motion-fast-2) var(--ease-standard), box-shadow var(--motion-fast-2) var(--ease-standard); }
+.i-field-input::placeholder { color: #625b78; font-weight: 400; }
+.i-field-input:focus { border-color: rgba(162, 233, 128, .6); box-shadow: 0 0 0 3px rgba(162, 233, 128, .12); }
+
+/* A link as a QR code (My money's "Get paid"): code, link, its name, then one even row of actions. */
+.q-card { width: 100%; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-3); background: var(--pay-well); border: 1px solid var(--pay-well-line); text-align: left; }
+.q-main { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; gap: var(--space-4); }
+.q-code { display: block; width: 96px; height: 96px; padding: var(--space-2); border-radius: var(--radius-2); background: #fff; }
+.q-code:empty { animation: skeleton 1.2s ease-in-out infinite alternate; }
+.q-code svg { display: block; width: 100%; height: 100%; }
+.q-side { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.q-label { font-size: 14px; line-height: 20px; font-weight: 600; color: #fff; }
+.q-link { font-family: var(--font-geist-mono), ui-monospace, monospace; font-size: 12px; line-height: 16px; color: #8b8598; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.q-name { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); height: 40px; padding: 0 var(--space-3); border-radius: var(--radius-2); background: var(--pay-raised); border: 1px solid var(--pay-line); transition: border-color var(--motion-fast-2) var(--ease-standard), box-shadow var(--motion-fast-2) var(--ease-standard); }
+.q-name:focus-within { border-color: rgba(162, 233, 128, .6); box-shadow: 0 0 0 3px rgba(162, 233, 128, .12); }
+.q-name span { flex: none; font-size: 12px; line-height: 16px; color: #8b8598; }
+.q-name input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 16px; font-weight: 600; color: #fff; }
+.q-name input::placeholder { color: #625b78; font-weight: 400; }
+.q-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+.q-actions.is-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.q-actions button { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); height: 44px; padding: 0 var(--space-2); border-radius: var(--radius-2); border: 1px solid var(--pay-line); background: var(--pay-raised); color: #e4e4e7; font: inherit; font-size: 14px; line-height: 20px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: border-color var(--motion-fast-2) var(--ease-standard), color var(--motion-fast-2) var(--ease-standard); }
+.q-actions button svg { flex: none; }
+.q-short { display: none; }
+@media (max-width: 379px) { .q-long { display: none; } .q-short { display: inline; } }
+/* My money on small phones: a long balance steps down a size instead of running past the card. */
+@media (max-width: 379px) {
+  .i-page .e-amount.pay-amount-m { font-size: 44px; line-height: 52px; }
+  .i-page .e-amount.pay-amount-s { font-size: 34px; line-height: 40px; }
+}
+.q-actions button:hover { border-color: #71717a; color: #fff; }
+.q-actions button:focus-visible { outline: 2px solid var(--pay-lime); outline-offset: 2px; }
+@media (max-width: 379px) {
+  .q-main { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .q-side { width: 100%; align-items: stretch; text-align: center; }
+  .q-actions button { padding: 0; font-size: 13px; gap: var(--space-1); }
+}
+
+/* Tip: the viewfinder */
+.t-finder { position: relative; aspect-ratio: 1 / 1; max-height: 52vh; width: 100%; margin-inline: auto; border-radius: var(--radius-4); overflow: hidden; background: radial-gradient(120% 90% at 50% 40%, #1a1428, #0b0912); border: 1px solid var(--pay-line); display: grid; place-items: center; }
+.t-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 300ms var(--ease-standard); }
+.t-finder.is-live .t-video { opacity: 1; }
+.t-corners { position: absolute; inset: 18%; pointer-events: none; }
+.t-corners i { position: absolute; width: 28px; height: 28px; border: 3px solid var(--pay-lime); filter: drop-shadow(0 0 6px rgba(162, 233, 128, .5)); }
+.t-corners i:nth-child(1) { top: 0; left: 0; border-right: 0; border-bottom: 0; border-top-left-radius: var(--radius-3); }
+.t-corners i:nth-child(2) { top: 0; right: 0; border-left: 0; border-bottom: 0; border-top-right-radius: var(--radius-3); }
+.t-corners i:nth-child(3) { bottom: 0; left: 0; border-right: 0; border-top: 0; border-bottom-left-radius: var(--radius-3); }
+.t-corners i:nth-child(4) { bottom: 0; right: 0; border-left: 0; border-top: 0; border-bottom-right-radius: var(--radius-3); }
+.t-finder.is-live .t-corners { animation: t-breathe 1.6s ease-in-out infinite; }
+@keyframes t-breathe { 50% { inset: 20%; } }
+.t-idle { position: relative; display: flex; flex-direction: column; align-items: center; gap: var(--space-3); max-width: 24ch; text-align: center; color: #a1a1aa; }
+.t-scan { height: 44px; padding: 0 var(--space-6); }
+.t-hint { font-size: 14px; line-height: 20px; color: #d4d4d8; }
+.t-stop { position: absolute; bottom: var(--space-3); left: 50%; translate: -50% 0; height: 44px; padding: 0 var(--space-4); border-radius: var(--radius-full); border: 1px solid rgba(255, 255, 255, .2); background: rgba(12, 8, 22, .7); color: #fff; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.t-paste { position: relative; }
+.t-input { width: 100%; height: 48px; padding: 0 56px 0 var(--space-4); border-radius: var(--radius-full); border: 1px solid var(--pay-line); background: var(--pay-well); color: #fff; font: inherit; font-size: 16px; outline: 0; transition: border-color var(--motion-fast-2) var(--ease-standard), box-shadow var(--motion-fast-2) var(--ease-standard); }
+.t-input::placeholder { color: #625b78; }
+.t-input:focus { border-color: rgba(162, 233, 128, .6); box-shadow: 0 0 0 3px rgba(162, 233, 128, .12); }
+.t-input.is-bad { border-color: rgba(252, 165, 165, .6); }
+.t-paste .t-go { right: var(--space-1); bottom: var(--space-1); }
+@media (prefers-reduced-motion: reduce) { .t-finder.is-live .t-corners { animation: none; } }
+/* Short phones (e.g. 320 × 568): the viewfinder and the list of people give up a little height. */
+@media (max-height: 640px) { .t-finder { max-height: 40vh; } .i-rows { max-height: 34vh; } }
+
+/* Labels for the list of people (manual §8: visible labels), and touch-size inputs on phones. */
+.i-head { position: sticky; top: 0; z-index: 1; display: grid; grid-template-columns: 32px minmax(0, 1fr) auto 24px; column-gap: var(--space-3); padding: 0 0 var(--space-2); font-size: 12px; line-height: 16px; font-weight: 500; color: #8b8598; background: var(--pay-void); border-bottom: 1px solid var(--pay-line-soft); }
+.i-head + .i-row { border-top: 0; }
+.i-head span:first-child { grid-column: 1 / 3; }
+.i-head span:last-child { justify-self: end; }
+@media (pointer: coarse) { .i-field-input, .t-input { height: 48px; } .i-value { height: 40px; } }
+/* Individual pages on laptops and desktops: keep clear of the footer only (no lane for the removed island),
+   the same as the tip page, so a card that fits the screen never scrolls. */
+@media (pointer: fine), (min-width: 1100px) { body:has(.i-page) .site-main { padding-bottom: calc(var(--footer-h) + var(--bottom-pad) + var(--space-2)); } }
+@media (min-width: 600px) and (max-height: 680px) { .chooser { --photo-ratio: 1.25; } }
+@media (min-width: 600px) and (max-height: 620px) { .chooser { --chooser-rest: 472px; padding-block: var(--space-3); } }
+/* A card too narrow for its chip shows the photo alone rather than a clipped chip. */
+@container (max-width: 199px) { .role-chip { display: none !important; } }
+
+/* Send · states that read as "not yet", not "broken" */
+.i-row .i-avatar.is-empty { color: #8b8598; background: transparent; box-shadow: inset 0 0 0 1px var(--pay-line); }
+.i-amount b.is-empty { color: #4a4458; }
+.i-total-field.is-empty > span { color: #4a4458; }
+.i-page .pay-send:disabled:not(.is-busy) { opacity: 1; color: #8b8598; background: var(--pay-raised); box-shadow: inset 0 0 0 1px var(--pay-line); }
+
+/* Individual pages: the footer follows the content in the page's own flow, so a long card never runs under it. */
+@media (min-width: 600px) {
+  body:has(.i-page) .site-main { flex: 1; display: flex; flex-direction: column; min-height: calc(100dvh - var(--header) - env(safe-area-inset-top, 0px) - var(--footer-h) - var(--bottom-pad)); }
+  body:has(.i-page) .site-footer { position: relative; }
+}
+@media (pointer: fine), (min-width: 1100px) { body:has(.i-page) .site-main { padding-bottom: var(--space-4); } }
+/* Short laptop screens: a little less air around the card, so card and footer both fit. */
+@media (min-width: 600px) and (max-height: 700px) { .i-page { padding-block: var(--space-3); } }
+@media (max-height: 620px) { .t-finder { max-height: 36vh; } }
+@media (min-width: 600px) and (max-height: 620px) { .i-page .e-photo { aspect-ratio: 2 / 1; } }

@@ -101,7 +101,9 @@ Visit `http://localhost:3000` to view the landing page.
 
 ### 2. Contract Details
 - **Network:** Monad Testnet
-- **Address:** `0x1A245Dc83F286CA5A6833626E813776623f9F336`
+- **TipSplitter (team tips, business side):** set by `NEXT_PUBLIC_TIP_SPLITTER`; first version `0x1A245Dc83F286CA5A6833626E813776623f9F336`
+- **WeepPay (one payment to many people, individual side):** `0xa0209c2245FdD5928a7a602a2d4c7d4239CF5A26`
+- **AUSD (test):** `0xcEF38D455529Dbc2e37654452C288C25e18ADea4`
 
 ### 3. Deploying Chainlink CRE Workflow
 Navigate to the `chainlink-cre` directory to compile and upload the WASM workflow definition.

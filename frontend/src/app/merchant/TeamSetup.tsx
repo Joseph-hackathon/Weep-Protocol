@@ -9,6 +9,7 @@ import { ArrowUp, ArrowUpRight, Check, ChevronLeft, Minus, Plus, X } from "lucid
 import { requestConnect, useWallet } from "../wallet-bridge";
 import { EXPLORER, SPLITTER, ausdBalance, readPolicy, readRoles, readTeam, supportsTeam, toDollars, waitForReceipt } from "../chain";
 import { setupMessage } from "../setup-message";
+import QrLink from "../QrLink";
 
 /**
  * Merchant one-prompt setup (co-founder's architecture):
@@ -399,6 +400,9 @@ export default function TeamSetup() {
                 )}
               </section>
             )}
+
+            {/* The code for the tables: what a customer scans (or an individual scans from Tip) to tip this team. */}
+            <QrLink path="/customer" name="team-tips" label="Your tip code for the tables" />
 
             <Link href="/customer" className="pay-again m-link">See what customers see</Link>
             <button type="button" className="m-text-btn" onClick={restart}>{fromChain ? "Change the team" : "Start over"}</button>

@@ -3,12 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import HeroFlower from "./HeroFlower";
 import Kinetic from "./Kinetic";
-import { ROLES } from "./roles";
+import { ROLES, SIDES, type Side } from "./roles";
 
 const EASE = [0.2, 0.8, 0.2, 1] as const;
 const FOLD_MS = 380; // petals fold upright before the hand-off (HeroFlower: 0.32s)
@@ -17,7 +17,7 @@ const HANDOFF_MS = 900; // cards travel 0.62s; the hidden flower is removed afte
 /**
  * The landing's two scenes on one stage, so moving between them never reloads or flashes:
  *   "/"      — the proposition and the flower.
- *   "/start" — "Where would you like to go?" with one card per role.
+ *   "/start" — "Where would you like to go?" with one card per role, for individuals or for a business.
  * Get started folds the flower, then the three role petals travel into the cards (shared layout ids).
  * The URL follows with history.pushState, so Back returns to the flower and a refresh keeps the choice.
  */
@@ -80,21 +80,19 @@ function Intro({ leaving, ghost, returning, onStart }: { leaving: boolean; ghost
   );
 }
 
-/** Desktop pointer tilt + glare: writes four CSS variables on the hovered card only (globals.css .role-card). */
-function tilt(e: React.PointerEvent<HTMLAnchorElement>) {
-  if (e.pointerType !== "mouse") return;
-  const el = e.currentTarget;
-  const r = el.getBoundingClientRect();
-  const x = (e.clientX - r.left) / r.width;   // 0 … 1
-  const y = (e.clientY - r.top) / r.height;
-  el.style.setProperty("--ry", `${(x - 0.5) * 10}deg`);
-  el.style.setProperty("--rx", `${(0.5 - y) * 8}deg`);
-  el.style.setProperty("--gx", `${x * 100}%`);
-  el.style.setProperty("--gy", `${y * 100}%`);
+/** Which side the chooser shows: individual by default, remembered on this device once someone switches. */
+const SIDE_KEY = "weep.side";
+function readSide(): Side {
+  try { return localStorage.getItem(SIDE_KEY) === "business" ? "business" : "individual"; } catch { return "individual"; }
 }
-function untilt(e: React.PointerEvent<HTMLAnchorElement>) {
-  const el = e.currentTarget;
-  for (const v of ["--rx", "--ry"]) el.style.setProperty(v, "0deg");
+function onSideChange(cb: () => void) {
+  window.addEventListener("weep:side", cb);
+  window.addEventListener("storage", cb);
+  return () => { window.removeEventListener("weep:side", cb); window.removeEventListener("storage", cb); };
+}
+function saveSide(s: Side) {
+  try { localStorage.setItem(SIDE_KEY, s); } catch {}
+  window.dispatchEvent(new Event("weep:side"));
 }
 
 /** The employee card's chip: a new tip arrives every few seconds. */
@@ -119,18 +117,35 @@ function Arrivals() {
 /** `handOff`: arrived from the flower, so the photos fly in from the petals instead of fading up. */
 function Chooser({ handOff }: { handOff: boolean }) {
   const lead = handOff ? 0.18 : 0; // let the photos start travelling before the words arrive
+  const reduce = useReducedMotion();
+  const side = useSyncExternalStore(onSideChange, readSide, () => "individual" as Side);
+  const words = { initial: { opacity: 0, y: reduce ? 0 : 6 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: reduce ? 0 : -6 }, transition: { duration: reduce ? 0 : 0.2, ease: EASE } };
   return (
     <div className="page chooser">
       <div className="chooser-floor" aria-hidden />
       <div className="chooser-head">
         <h1 className="chooser-title"><Kinetic text="Where would you like to go?" delay={lead * 1000} /></h1>
-        <p className="chooser-sub rise" style={{ ["--d" as string]: `${lead * 1000 + 240}ms` }}>Pick one. You can switch anytime.</p>
+        <div className="side-switch rise" role="radiogroup" aria-label="Who it's for" style={{ ["--d" as string]: `${lead * 1000 + 200}ms` }}>
+          {SIDES.map((s) => (
+            <button key={s.id} type="button" role="radio" aria-checked={side === s.id} className="side-option" onClick={() => saveSide(s.id)}>
+              {side === s.id && <motion.span layoutId="side-thumb" className="side-thumb" transition={{ duration: reduce ? 0 : 0.32, ease: EASE }} />}
+              <span className="side-label">{s.label}</span>
+            </button>
+          ))}
+        </div>
+        <p className="chooser-sub rise" style={{ ["--d" as string]: `${lead * 1000 + 260}ms` }}>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span key={side} className="chooser-sub-text" {...words}>{SIDES.find((s) => s.id === side)!.sub}</motion.span>
+          </AnimatePresence>
+        </p>
       </div>
 
       <ul className="chooser-grid">
-        {ROLES.map((r, i) => (
+        {ROLES.map((r, i) => {
+          const c = r[side];
+          return (
           <li key={r.id}>
-            <Link href={r.href} className="role-card" onPointerMove={tilt} onPointerLeave={untilt}>
+            <Link href={c.href} className="role-card">
               <motion.div
                 layoutId={`role-${r.id}`}
                 layoutCrossfade={false}
@@ -140,9 +155,10 @@ function Chooser({ handOff }: { handOff: boolean }) {
                 transition={{ layout: { duration: 0.62, ease: EASE }, duration: 0.5, delay: handOff ? 0 : 0.1 + i * 0.08, ease: EASE }}
               >
                 <Image src={r.img} alt="" fill sizes="(min-width: 600px) 280px, 64px" />
-                <span className="role-glare" aria-hidden />
                 <span className="role-chip" aria-hidden style={{ ["--d" as string]: `${(lead + 0.5 + i * 0.08) * 1000}ms` }}>
-                  {r.id === "employee" ? (<><span className="role-chip-dot" /><Arrivals /><span className="role-chip-muted">{r.chip}</span></>) : r.chip}
+                  {r.id === "employee" ? (<><span className="role-chip-dot" /><Arrivals /><span className="role-chip-muted">{c.chip}</span></>) : (
+                    <AnimatePresence mode="wait" initial={false}><motion.span key={side} {...words}>{c.chip}</motion.span></AnimatePresence>
+                  )}
                 </span>
               </motion.div>
               <motion.span
@@ -151,13 +167,18 @@ function Chooser({ handOff }: { handOff: boolean }) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: lead + 0.22 + i * 0.07, ease: EASE }}
               >
-                <span className="role-title">{r.title}</span>
-                <span className="role-line">{r.line}</span>
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span key={side} className="role-words" {...words}>
+                    <span className="role-title">{c.title}</span>
+                    <span className="role-line">{c.line}</span>
+                  </motion.span>
+                </AnimatePresence>
               </motion.span>
               <ChevronRight className="role-chevron" size={20} aria-hidden />
             </Link>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </div>
   );
