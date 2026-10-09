@@ -1,13 +1,14 @@
 # API reference
 
-The four server routes the Weep app calls. They run on the website's own server: the base URL is `https://weep-protocol.vercel.app` live, or `http://localhost:3000` locally. Every request and response body is JSON. The routes keep no data.
+The five server routes the Weep app calls. They run on the website's own server: the base URL is `https://weep-protocol.vercel.app` live, or `http://localhost:3000` locally. Every request and response body is JSON. The routes keep no data.
 
 | Route | Does | Needs |
 |---|---|---|
 | [`POST /api/send/parse`](#post-apisendparse) | Reads a payment description into rows | `GEMINI_API_KEY` |
 | [`POST /api/send/wallets`](#post-apisendwallets) | Finds or creates the wallet behind each email | `PRIVY_APP_SECRET`, sender's signature |
 | [`POST /api/setup/parse`](#post-apisetupparse) | Reads a team description into people and a split | `GEMINI_API_KEY` |
-| [`POST /api/setup/wallets`](#post-apisetupwallets) | Creates wallets for a team's emails | `PRIVY_APP_SECRET`, the pool owner's signature |
+| [`POST /api/setup/wallets`](#post-apisetupwallets) | Creates wallets for a team's emails | `PRIVY_APP_SECRET`, the business's signature for its own pool |
+| [`POST /api/gas`](#post-apigas) | Covers the first network fee of an email sign-in | `PRIVY_APP_SECRET`, `GAS_SPONSOR_KEY`, the person's Privy session |
 
 Payments never go through these routes. They are sent from the person's own wallet straight to the contracts, as described in [architecture.md](architecture.md).
 
@@ -175,13 +176,22 @@ curl -s https://weep-protocol.vercel.app/api/setup/parse \
 
 ## POST /api/setup/wallets
 
-Makes sure every person on a business's team has a wallet before they ever sign in. Only the pool's own owner or agent can call it: the server reads `owner()` and `agent()` from the TipSplitter contract and checks the signer against them.
+Makes sure every person on a business's team has a wallet before they ever sign in. A business may only do this for its own pool. The server accepts the signer if either:
 
-**Request**: same fields as [`/api/send/wallets`](#post-apisendwallets), with 1–50 emails. The signed message, built by [`setupMessage`](../frontend/src/app/setup-message.ts), is:
+- the signer is the pool's `owner()` or `agent()`, for a pool created by WeepPools (or the first shared pool); or
+- the pool doesn't exist yet and `WeepPools.predict(signer)` equals it, meaning the signer's own pool is about to be created there.
+
+**Request**: the same fields as [`/api/send/wallets`](#post-apisendwallets), with 1–50 emails, plus:
+
+| Field | Type | Rules |
+|---|---|---|
+| `pool` | `0x…` | The business's pool address, or where `WeepPools.predict(signer)` says it will be created |
+
+The signed message, built by [`setupMessage`](../frontend/src/app/setup-message.ts), is:
 
 ```text
 Weep team setup
-Pool: <TipSplitter address>
+Pool: <pool address, lowercase>
 Emails: <sorted, lowercased emails joined by ", ">
 Issued: <issuedAt>
 ```
@@ -198,4 +208,40 @@ Issued: <issuedAt>
 
 | Status | `error` | When |
 |---|---|---|
-| 403 | `not-owner` | The signer is neither the pool's owner nor its agent |
+| 401 | `unsigned` | Also returned when `pool` is missing or isn't an address |
+| 403 | `not-owner` | The signer doesn't run that pool and isn't about to create it |
+
+---
+
+## POST /api/gas
+
+Covers the network fee for someone who signed in with email, so their first payment needs nothing but an email. The route sends 0.1 test MON from Weep's sponsor wallet to the person's own Privy email wallet. The app calls it before a payment, a team setup or a payout, only when that wallet holds less than 0.05 MON.
+
+**Request**
+
+| Part | Value |
+|---|---|
+| Header `Authorization` | `Bearer <Privy access token>` of the signed-in person |
+| Body `address` | Their wallet address |
+
+The route gives MON only when every check passes:
+
+- the token is a valid Privy session;
+- `address` is that person's own Privy email wallet, not a wallet they connected;
+- the wallet holds less than 0.05 MON and has sent fewer than 20 transactions;
+- the sponsor wallet would keep at least 1 MON afterwards.
+
+**Responses**
+
+| Status | Body | When |
+|---|---|---|
+| 200 | `{ "covered": true, "hash": "0x…" }` | 0.1 MON sent; `hash` is the transaction |
+| 200 | `{ "covered": false, "reason": "enough" }` | The wallet already has enough |
+| 400 | `{ "error": "bad-address" }` | `address` missing or invalid |
+| 401 | `{ "error": "signed-out" }` | No valid Privy session |
+| 403 | `{ "error": "not-your-wallet" }` | The address isn't the person's own email wallet |
+| 429 | `{ "error": "limit" }` | The wallet has already made 20 or more transactions |
+| 503 | `{ "error": "not-configured" }` or `{ "error": "empty" }` | Cover is switched off, or the sponsor wallet is running low |
+| 502 | `{ "error": "failed" }` | The transfer couldn't be sent |
+
+When the route can't help, the app points the person to [Monad's faucet](https://faucet.monad.xyz) instead.

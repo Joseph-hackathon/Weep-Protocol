@@ -30,6 +30,7 @@ export default function Page() {
           <li><strong>Describe it.</strong> Write who gets what, in your own words. For example: &ldquo;$60 to Sam, Ama and Kai, Sam gets half&rdquo;. You can also add people yourself.</li>
           <li><strong>Check it.</strong> Weep lists every person with their exact amount, worked out by Weep&apos;s own code. Change anything you like. If something doesn&apos;t add up, Weep says so and won&apos;t send.</li>
           <li><strong>Reach emails.</strong> If you&apos;re paying people by email, your wallet signs once so Weep can find, or create, their wallets.</li>
+          <li><strong>Cover the fee.</strong> If you signed in with email and your wallet is low on MON, Weep sends it a little test MON for the network fee first.</li>
           <li><strong>Top up test dollars.</strong> If your balance is short, Weep adds test dollars to your wallet first. That&apos;s possible only because this is testnet.</li>
           <li><strong>Allow the exact total.</strong> Your wallet lets the payment contract use exactly the total you reviewed, and not a cent more.</li>
           <li><strong>Send once.</strong> One transaction pays everyone at the same moment.</li>
@@ -73,11 +74,12 @@ export default function Page() {
 
       <Part id="tips" title="Tips and business pools">
         <ul>
-          <li><strong>Tip a person by name.</strong> The tip goes straight from the guest to that person&apos;s wallet, 100%, through the pool contract&apos;s <code>tipIndividual</code>. It never sits in the pool.</li>
-          <li><strong>Tip the whole team.</strong> The tip goes into the business&apos;s pool contract and waits there until the business pays out. The payout splits it between groups (floor, kitchen, bar) by the business&apos;s rule, and evenly within each group. A group with nobody in it passes its share to the others. A remainder smaller than a cent can stay in the pool, and it goes out with the next payout.</li>
-          <li><strong>Who controls a pool.</strong> The wallet that owns the pool, plus any agent it names, sets the team, changes the split and starts payouts. Staff are trusting the business to pay out. Every team change and payout is public on Monad, so anyone can check it.</li>
+          <li><strong>Every business has its own pool.</strong> Setting up a team in the Merchant Portal creates the business&apos;s own pool on Monad in one confirmation, owned by its wallet. Its table code opens that pool and no other, and Weep checks the code leads to a real Weep pool before anyone can send.</li>
+          <li><strong>Tip a person by name.</strong> The tip goes straight from the guest to that person&apos;s wallet, 100%, through the pool&apos;s <code>tipIndividual</code>. It never sits in the pool.</li>
+          <li><strong>Tip the whole team.</strong> The tip goes into the business&apos;s pool and waits there until the business pays out. The payout splits it between groups (floor, kitchen, bar) by the business&apos;s rule, and evenly within each group. A group with nobody in it passes its share to the others. A remainder smaller than a cent can stay in the pool, and it goes out with the next payout.</li>
+          <li><strong>Who controls a pool.</strong> Only the wallet that owns the pool, plus any agent it names, can set the team, change the split and start payouts. Weep can&apos;t. Staff are trusting the business to pay out. Every team change and payout is public on Monad, so anyone can check it.</li>
         </ul>
-        <p>Read the pool contract: <a href={`${SRC}/contracts/contracts/TipSplitter.sol`} target="_blank" rel="noreferrer">TipSplitter.sol</a>.</p>
+        <p>Read the contracts: <a href={`${SRC}/contracts/contracts/WeepPools.sol`} target="_blank" rel="noreferrer">WeepPools.sol</a> and <a href={`${SRC}/contracts/contracts/TipPool.sol`} target="_blank" rel="noreferrer">TipPool.sol</a>.</p>
       </Part>
 
       <Part id="ai" title="What the AI does, and doesn&apos;t">
@@ -89,7 +91,7 @@ export default function Page() {
           <li><strong>It asks rather than guesses.</strong> If the total is missing, a person is unclear, or the amounts can&apos;t add up, it asks you a question.</li>
           <li><strong>It doesn&apos;t make people up.</strong> If you say &ldquo;20 winners&rdquo; without naming them, it creates numbered rows and asks how to reach each person.</li>
         </ul>
-        <p>On 8 October 2026 we tried 14 very different descriptions on the live site. They included a long paragraph with the amounts buried inside, &ldquo;2k&rdquo; and &ldquo;1.5k&rdquo;, &ldquo;fifty bucks&rdquo;, &ldquo;USD 1,250.75&rdquo;, fractions and percentages, emails only, raw wallet addresses, a misspelled name, 20 unnamed winners, a request with no total, and amounts that don&apos;t add up. Sent one at a time, all 14 were read correctly, and the last two produced a question instead of a guess. When all 14 were sent at once, 3 came back with &ldquo;Couldn&apos;t read that just now&rdquo; because the AI service was busy. Weep showed that message rather than a wrong draft. AI can still make mistakes, and that&apos;s why you check every amount before sending.</p>
+        <p>On 8 October 2026 we tried 14 very different descriptions on the live site. They included a long paragraph with the amounts buried inside, &ldquo;2k&rdquo; and &ldquo;1.5k&rdquo;, &ldquo;fifty bucks&rdquo;, &ldquo;USD 1,250.75&rdquo;, fractions and percentages, emails only, raw wallet addresses, a misspelled name, 20 unnamed winners, a request with no total, and amounts that don&apos;t add up. Sent one at a time, all 14 were read correctly, and the last two produced a question instead of a guess. When all 14 were sent at once, 3 came back with &ldquo;Couldn&apos;t read that just now&rdquo; because the AI service was busy. Weep showed that message rather than a wrong draft, and each model now gets a second try before the next one takes over. AI can still make mistakes, and that&apos;s why you check every amount before sending.</p>
       </Part>
 
       <Part id="proof" title="Check it yourself">
@@ -98,7 +100,8 @@ export default function Page() {
             <thead><tr><th scope="col">Contract</th><th scope="col">Address on Monad testnet (chain 10143)</th></tr></thead>
             <tbody>
               <tr><th scope="row">WeepPay: one payment to many people</th><td data-label="Address on Monad testnet (chain 10143)"><a href={`${EXPLORER}/address/0xa0209c2245FdD5928a7a602a2d4c7d4239CF5A26`} target="_blank" rel="noreferrer"><code>0xa0209c2245FdD5928a7a602a2d4c7d4239CF5A26</code></a></td></tr>
-              <tr><th scope="row">TipSplitter: business tip pool</th><td data-label="Address on Monad testnet (chain 10143)"><a href={`${EXPLORER}/address/0x06db4c849EF42653982694Ae924dC99DBB80EA35`} target="_blank" rel="noreferrer"><code>0x06db4c849EF42653982694Ae924dC99DBB80EA35</code></a></td></tr>
+              <tr><th scope="row">WeepPools: a tip pool for every business</th><td data-label="Address on Monad testnet (chain 10143)"><a href={`${EXPLORER}/address/0x5b9f33a6db109314f4720dd28a5bed9C1Ef53210`} target="_blank" rel="noreferrer"><code>0x5b9f33a6db109314f4720dd28a5bed9C1Ef53210</code></a></td></tr>
+              <tr><th scope="row">TipSplitter: the first, shared pool</th><td data-label="Address on Monad testnet (chain 10143)"><a href={`${EXPLORER}/address/0x06db4c849EF42653982694Ae924dC99DBB80EA35`} target="_blank" rel="noreferrer"><code>0x06db4c849EF42653982694Ae924dC99DBB80EA35</code></a></td></tr>
               <tr><th scope="row">AUSD (test): the dollars Weep uses</th><td data-label="Address on Monad testnet (chain 10143)"><a href={`${EXPLORER}/address/0xcEF38D455529Dbc2e37654452C288C25e18ADea4`} target="_blank" rel="noreferrer"><code>0xcEF38D455529Dbc2e37654452C288C25e18ADea4</code></a></td></tr>
             </tbody>
           </table>
@@ -113,7 +116,7 @@ export default function Page() {
           <li><strong>Testnet only.</strong> Test dollars have no value. The network can be slow, reset or unavailable, and Weep&apos;s contracts may be replaced by new versions.</li>
           <li><strong>Not audited.</strong> The contracts are tested but haven&apos;t been reviewed by an independent auditor.</li>
           <li><strong>Wrong address, wrong person.</strong> Money sent to a mistyped wallet or email goes to that wallet or email.</li>
-          <li><strong>Network fees.</strong> Each transaction needs a little MON, which is free on testnet from the <a href="https://faucet.monad.xyz" target="_blank" rel="noreferrer">Monad faucet</a>.</li>
+          <li><strong>Network fees.</strong> Each transaction needs a little MON. Weep covers the first fees of email sign-ins; a wallet you connect yourself gets MON free from the <a href="https://faucet.monad.xyz" target="_blank" rel="noreferrer">Monad faucet</a>.</li>
           <li><strong>Recent activity only in the app.</strong> My money and the Employee Dashboard show payments they see arrive while open, plus what they remember on your device. The full history of any wallet is always on the <a href={EXPLORER} target="_blank" rel="noreferrer">Monad testnet explorer</a>.</li>
           <li><strong>Services can fail.</strong> If Privy, the Gemini API or the Monad endpoint is down, signing in, reading descriptions or sending may not work until it&apos;s back. A payment either confirms in full or doesn&apos;t happen at all.</li>
         </ul>

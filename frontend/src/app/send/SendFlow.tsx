@@ -6,7 +6,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowUp, ArrowUpRight, Check, ChevronLeft, Plus, X } from "lucide-react";
 import { requestConnect, useWallet } from "../wallet-bridge";
-import { AUSD, EXPLORER, FAUCET, approveData, ausdAllowance, ausdBalance, mintData, monBalance, transfersIn, waitForReceipt, type Moved } from "../chain";
+import { AUSD, EXPLORER, FAUCET, approveData, ausdAllowance, ausdBalance, mintData, transfersIn, waitForReceipt, type Moved } from "../chain";
+import { ensureGas } from "../gas";
 import { MAX_RECIPIENTS, PAY, payData } from "../pay";
 import { plan, sharesOf, type Mode, type Row } from "../allocate";
 import { sendMessage } from "../send-message";
@@ -22,7 +23,7 @@ import { sendMessage } from "../send-message";
  * People can be reached by email (they open it by signing in with that email) or by wallet address.
  */
 type Stage = "say" | "check" | "done";
-type Phase = "idle" | "signin" | "lookup" | "minting" | "approve" | "confirm" | "sending" | "pending";
+type Phase = "idle" | "signin" | "gas" | "lookup" | "minting" | "approve" | "confirm" | "sending" | "pending";
 type Person = Row & { key: number };
 
 const EASE = [0.2, 0.8, 0.2, 1] as const;
@@ -148,7 +149,8 @@ export default function SendFlow() {
     if (!address || !wallet.send || !wallet.sign) { setPhase("signin"); requestConnect(); return; }
     if (!wallet.onMonad) { setMessage("Your wallet is on another network. Switch to Monad at the top, then send."); return; }
     try {
-      if ((await monBalance(address)) === BigInt(0)) { setPhase("idle"); window.open(FAUCET, "_blank", "noopener"); setMessage("Sending needs a little MON for the network fee. Get some free from the faucet, then send."); return; }
+      setPhase("gas");
+      if (!(await ensureGas(wallet))) { setPhase("idle"); window.open(FAUCET, "_blank", "noopener"); setMessage("Sending needs a little MON for the network fee. Get some free from the faucet, then send."); return; }
       const emails = [...new Set(rows.filter((r) => isEmail(r.contact)).map((r) => r.contact.toLowerCase()))];
       const map = emails.length ? await walletsFor(emails) : resolved;
       const lines = rows.map((r, i) => ({ name: r.name, wallet: isEmail(r.contact) ? map[r.contact.toLowerCase()] : r.contact, cents: p.cents[i] }));
@@ -216,6 +218,7 @@ export default function SendFlow() {
   const fade = { initial: { opacity: 0, y: reduce ? 0 : 12 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: reduce ? 0 : -8 }, transition: { duration: reduce ? 0 : 0.26, ease: EASE } };
   const label =
     phase === "signin" ? "Signing in" :
+    phase === "gas" ? "Covering the network fee" :
     phase === "lookup" ? "Sign to reach their emails" :
     phase === "minting" ? "Adding test dollars" :
     phase === "approve" ? "Allow the payment in your wallet" :
@@ -339,7 +342,7 @@ export default function SendFlow() {
             <button type="button" className={`pay-send${busy ? " is-busy" : ""}`} onClick={phase === "pending" ? checkPending : send} disabled={(!ready && phase !== "pending") || busy} aria-busy={busy || undefined}>
               <span className="pay-send-progress" aria-hidden />
               <motion.span className="pay-send-fill" aria-hidden initial={false}
-                animate={{ scaleX: phase === "sending" ? 0.92 : phase === "confirm" ? 0.6 : phase === "approve" || phase === "minting" ? 0.4 : phase === "lookup" ? 0.25 : phase === "signin" ? 0.1 : 0 }}
+                animate={{ scaleX: phase === "sending" ? 0.92 : phase === "confirm" ? 0.6 : phase === "approve" || phase === "minting" ? 0.4 : phase === "lookup" ? 0.25 : phase === "gas" ? 0.15 : phase === "signin" ? 0.1 : 0 }}
                 transition={{ duration: reduce ? 0 : phase === "sending" ? 2.6 : 0.4, ease: phase === "sending" ? [0.1, 0.6, 0.3, 1] : EASE }} />
               <span className="pay-send-label">
                 <AnimatePresence mode="popLayout" initial={false}>

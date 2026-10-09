@@ -2,9 +2,34 @@
 
 User-visible changes to Weep, newest first. Everything below was built during Monad Metropolis (1 September – 13 October 2026).
 
-## 2026-10-08
+## 2026-10-09
 
 ### Added
+- **Every business gets its own tip pool.** The Merchant Portal creates the business's pool on Monad, with its team and split, in one confirmation (WeepPools at `0x5b9f33a6db109314f4720dd28a5bed9C1Ef53210`, verified). Table codes and links open that business's pool, checked on Monad first. Anyone can now try the whole business flow.
+- **First network fee covered for email sign-ins,** so a first payment, team setup or payout needs nothing but an email. Connected wallets still use the faucet.
+- **Nine new contract tests** (28 in total) for pools: one per business, owner-only changes and payouts, no second setup, exact payouts.
+- **AI tools note** in the README, as the hackathon rules ask.
+
+### Fixed
+- The team-tip preview and receipt now follow the pool's real rule: a group with nobody in it no longer shows a share.
+- On laptop screens, the footer no longer overlaps the Merchant Portal and Employee Dashboard cards.
+
+### Removed
+- Early experiments that returned made-up data (`/api/policy`, `/api/nansen`, `/api/logs`, `/api/merchant/setup`), their database files and unused images.
+
+## 2026-10-08
+
+### Added (evening)
+- **Contract source verified on MonadVision** (Sourcify) for WeepPay, TipSplitter and AUSD (test).
+- **Five new contract tests** (19 in total): no double payouts, nothing lost to rounding, unknown recipients refused, insufficient funds and spent allowances move nothing.
+- **App tests for the amount rules** (`npm test` in `frontend`), including 5,000 random payment plans.
+- **Document pages** (Terms, Privacy, How money moves) laid out as one reading column, linked quietly from the landing page.
+
+### Changed
+- When the AI service is busy, each model now gets one retry before the next takes over, so bursts of requests are less likely to show an error.
+- Pages that were opened in a background tab, like a scanned tip code, now read Monad as soon as they're seen, without waiting for the next refresh.
+
+### Added (morning)
 - **Individual side.** The role chooser has an **Individual · Business** switch. Individual is the default, and the choice is remembered. It has three screens:
   - **Send**: describe a payment in words, check the exact amounts, and pay everyone in one transaction, by email or wallet.
   - **My money**: your balance, payments in with sender and time, and your own pay-me link and QR code.

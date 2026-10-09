@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { GoogleGenerativeAI, SchemaType, type ResponseSchema } from "@google/generative-ai";
+import { SchemaType, type ResponseSchema } from "@google/generative-ai";
+import { readJson } from "../../gemini";
 
 /**
  * Send, step 1: read a plain-words payment ("$60 to Sam, Ama and Kai, Sam gets half"; "$2,000 among these
@@ -11,9 +12,6 @@ import { GoogleGenerativeAI, SchemaType, type ResponseSchema } from "@google/gen
 type Row = { name: string; contact: string; mode: "equal" | "percent" | "fixed"; value: number };
 export type SendDraft = { total: number; rows: Row[]; questions: string[] };
 
-// Newest first. Google closes older models to new keys, so a model that's missing, refused or busy hands
-// over to the next one. GEMINI_MODEL can pin a specific one.
-const MODELS = [process.env.GEMINI_MODEL, "gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"].filter(Boolean) as string[];
 const MAX_CHARS = 6000;
 const MAX_ROWS = 100;
 
@@ -57,7 +55,7 @@ export async function POST(req: Request) {
   if (prompt.length > MAX_CHARS) return NextResponse.json({ error: "too-long" }, { status: 400 });
 
   try {
-    const data = JSON.parse(await read(key, prompt)) as SendDraft;
+    const data = await readJson<SendDraft>(key, instructions, schema, prompt);
     // Tidy what came back so the review never shows something the payment would refuse.
     const rows = (data.rows ?? []).slice(0, MAX_ROWS).map((r) => ({
       name: String(r.name ?? "").trim().slice(0, 40),
@@ -74,22 +72,3 @@ export async function POST(req: Request) {
   }
 }
 
-/** Ask each model in turn; only "not available to this key" and "busy" move on to the next. */
-async function read(key: string, prompt: string): Promise<string> {
-  let last: unknown;
-  for (const name of MODELS) {
-    try {
-      const model = new GoogleGenerativeAI(key).getGenerativeModel({
-        model: name,
-        systemInstruction: instructions,
-        generationConfig: { responseMimeType: "application/json", responseSchema: schema, temperature: 0 },
-      });
-      return (await model.generateContent(prompt)).response.text();
-    } catch (e) {
-      last = e;
-      const status = (e as { status?: number }).status;
-      if (status !== 404 && status !== 403 && status !== 429 && status !== 503) break;
-    }
-  }
-  throw last;
-}

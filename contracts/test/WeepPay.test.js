@@ -85,4 +85,23 @@ describe("WeepPay", () => {
       expect(gas).to.be.lessThan(5_000_000n);
     }
   });
+
+  it("moves nothing when the sender's balance can't cover the total", async () => {
+    const { ausd, pay, stranger, people } = await setup();
+    await ausd.mint(stranger.address, usd(20));
+    await allow(ausd, pay, stranger, usd(30));
+    const to = people(3);
+    await expect(pay.connect(stranger).pay(to, to.map(() => usd(10)), usd(30), ethers.ZeroHash)).to.be.reverted;
+    expect(await balances(ausd, to)).to.deep.equal([0n, 0n, 0n]);
+    expect(await ausd.balanceOf(stranger.address)).to.equal(usd(20));
+  });
+
+  it("can't be paid twice from one approval: the exact allowance is spent by the first payment", async () => {
+    const { ausd, pay, sender, people } = await setup();
+    const to = people(2);
+    await allow(ausd, pay, sender, usd(20)); // what Weep approves: exactly the reviewed total
+    await pay.pay(to, [usd(10), usd(10)], usd(20), ethers.ZeroHash);
+    await expect(pay.pay(to, [usd(10), usd(10)], usd(20), ethers.ZeroHash)).to.be.reverted;
+    expect(await balances(ausd, to)).to.deep.equal([usd(10), usd(10)]);
+  });
 });

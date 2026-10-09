@@ -1,4 +1,4 @@
-import { TIP_SPLITTER } from "./setup-message";
+import { SHARED_POOL, WEEP_POOLS } from "./setup-message";
 
 /**
  * Read-only access to Weep on Monad testnet with plain JSON-RPC (no wallet library, ~1 KB), plus the
@@ -7,15 +7,16 @@ import { TIP_SPLITTER } from "./setup-message";
 export const RPC = process.env.NEXT_PUBLIC_MONAD_RPC || "https://testnet-rpc.monad.xyz";
 export const EXPLORER = "https://testnet.monadexplorer.com";
 export const FAUCET = "https://faucet.monad.xyz";
-/** TipSplitter (the team's tip pool); a redeployed pool is set with NEXT_PUBLIC_TIP_SPLITTER. */
-export const SPLITTER = TIP_SPLITTER;
+/** The first, shared tip pool; each business now gets its own pool from WEEP_POOLS (setup-message.ts). */
+export const SPLITTER = SHARED_POOL;
+export { WEEP_POOLS };
 /** Agora USD (test), 18 decimals; set NEXT_PUBLIC_AUSD if a new pool uses a new token. */
 export const AUSD = (process.env.NEXT_PUBLIC_AUSD || "0xcEF38D455529Dbc2e37654452C288C25e18ADea4") as `0x${string}`;
 
 const SEL = {
   currentPolicy: "0xc7d29856", balanceOf: "0x70a08231", transfer: "0xa9059cbb", mint: "0x40c10f19",
   owner: "0x8da5cb5b", agent: "0xf5ff5c76", getTeam: "0x8bce6edd", approve: "0x095ea7b3", allowance: "0xdd62ed3e",
-  tipIndividual: "0xefb301a4",
+  tipIndividual: "0xefb301a4", poolOf: "0x988b1fa7", isPool: "0x5b16ebb7", predict: "0x901b96e7",
 };
 const word = (hex: string) => hex.replace(/^0x/, "").padStart(64, "0");
 
@@ -28,8 +29,8 @@ async function rpc<T>(method: string, params: unknown[]): Promise<T> {
 const call = (to: string, data: string) => rpc<string>("eth_call", [{ to, data }, "latest"]);
 
 /** The live split rule (percentages): front of house, back of house (kitchen), bar. */
-export async function readPolicy() {
-  const r = (await call(SPLITTER, SEL.currentPolicy)).slice(2);
+export async function readPolicy(pool: string) {
+  const r = (await call(pool, SEL.currentPolicy)).slice(2);
   const n = (i: number) => Number(BigInt("0x" + r.slice(i * 64, i * 64 + 64)));
   return { foh: n(0), boh: n(1), bar: n(2) };
 }
@@ -41,21 +42,43 @@ export async function monBalance(owner: string) {
 }
 
 /** Who runs the pool: only the owner or the agent may change the rule or register the team. */
-export async function readRoles() {
-  const [o, a] = await Promise.all([call(SPLITTER, SEL.owner), call(SPLITTER, SEL.agent)]);
+export async function readRoles(pool: string) {
+  const [o, a] = await Promise.all([call(pool, SEL.owner), call(pool, SEL.agent)]);
   const addr = (r: string) => ("0x" + r.slice(-40)).toLowerCase();
   return { owner: addr(o), agent: addr(a) };
 }
 /** Whether the deployed pool keeps the team on-chain (getTeam / setTeam / tipIndividual / payoutTeam). */
-export async function supportsTeam() {
-  const code = await rpc<string>("eth_getCode", [SPLITTER, "latest"]);
+export async function supportsTeam(pool: string) {
+  if (await isWeepPool(pool) && pool.toLowerCase() !== SPLITTER.toLowerCase()) return true; // every pool from WEEP_POOLS keeps its team
+  const code = await rpc<string>("eth_getCode", [pool, "latest"]);
   return code.toLowerCase().includes(SEL.getTeam.slice(2));
 }
 
+const asAddress = (r: string) => ("0x" + r.slice(-40)).toLowerCase();
+const ZERO = "0x" + "0".repeat(40);
+/** A business's own pool, or null if it hasn't made one yet. */
+export async function poolOf(owner: string): Promise<string | null> {
+  const a = asAddress(await call(WEEP_POOLS, SEL.poolOf + word(owner)));
+  return a === ZERO ? null : a;
+}
+/** Where a business's pool will be created: known before it exists, so its team's wallets can be approved first. */
+export async function predictPool(owner: string) {
+  return asAddress(await call(WEEP_POOLS, SEL.predict + word(owner)));
+}
+const known = new Map<string, boolean>([[SPLITTER.toLowerCase(), true]]);
+/** Whether an address is a real Weep pool (made by WEEP_POOLS, or the first shared pool). Cached. */
+export async function isWeepPool(addr: string) {
+  const a = addr.toLowerCase();
+  if (!known.has(a)) known.set(a, BigInt(await call(WEEP_POOLS, SEL.isPool + word(a))) === BigInt(1));
+  return known.get(a)!;
+}
+/** The same answer without waiting, for labels: true only once an address is known to be a pool. */
+export const isKnownPool = (addr: string) => known.get(addr.toLowerCase()) === true;
+
 export type Member = { name: string; wallet: string; group: 0 | 1 | 2 }; // 0 floor, 1 kitchen, 2 bar
 /** The saved team, read in one call (the public RPC caps log queries at 100 blocks, so no event scans). */
-export async function readTeam(): Promise<Member[]> {
-  const r = (await call(SPLITTER, SEL.getTeam)).slice(2);
+export async function readTeam(pool: string): Promise<Member[]> {
+  const r = (await call(pool, SEL.getTeam)).slice(2);
   const at = (byte: number) => Number(BigInt("0x" + r.slice(byte * 2, byte * 2 + 64)));
   const list = at(0);               // offset of the array
   const n = at(list);

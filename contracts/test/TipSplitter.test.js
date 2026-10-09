@@ -73,4 +73,40 @@ describe("TipSplitter", () => {
     await splitter.registerEmployee("Sam", sam.address);
     expect((await splitter.getTeam())[0].name).to.equal("Sam");
   });
+
+  it("never pays the same tips twice", async () => {
+    const { ausd, splitter, customer, sam, kai } = await setup();
+    await splitter.setTeam(["Sam", "Kai"], [sam.address, kai.address], [0, 1]);
+    await ausd.connect(customer).transfer(await splitter.getAddress(), usd(90));
+    await splitter.payoutTeam();
+    await expect(splitter.payoutTeam()).to.be.revertedWith("No tips to distribute");
+    expect(await ausd.balanceOf(sam.address)).to.equal(usd(60));
+    expect(await ausd.balanceOf(kai.address)).to.equal(usd(30));
+  });
+
+  it("loses nothing to rounding: a remainder stays in the pool for the next payout", async () => {
+    const { ausd, splitter, customer, sam, ama, kai } = await setup();
+    await splitter.setTeam(["Sam", "Ama", "Kai"], [sam.address, ama.address, kai.address], [0, 0, 0]);
+    const pool = await splitter.getAddress();
+    await ausd.connect(customer).transfer(pool, usd(10)); // $10 three ways doesn't divide evenly
+    await splitter.payoutTeam();
+    const paid = (await ausd.balanceOf(sam.address)) + (await ausd.balanceOf(ama.address)) + (await ausd.balanceOf(kai.address));
+    const left = await ausd.balanceOf(pool);
+    expect(paid + left).to.equal(usd(10));
+    expect(left).to.be.lessThan(3n); // a few units of 10^-18 dollars, not lost
+    await ausd.connect(customer).transfer(pool, usd(3));
+    await splitter.payoutTeam();
+    const after = (await ausd.balanceOf(sam.address)) + (await ausd.balanceOf(ama.address)) + (await ausd.balanceOf(kai.address)) + (await ausd.balanceOf(pool));
+    expect(after).to.equal(usd(13));
+  });
+
+  it("refuses tips to someone not on the team, empty tips, and more than the guest allowed", async () => {
+    const { ausd, splitter, customer, sam } = await setup();
+    await splitter.setTeam(["Sam"], [sam.address], [0]);
+    await ausd.connect(customer).approve(await splitter.getAddress(), usd(5));
+    await expect(splitter.connect(customer).tipIndividual("Nobody", usd(1))).to.be.revertedWith("Employee not registered");
+    await expect(splitter.connect(customer).tipIndividual("Sam", 0)).to.be.revertedWith("Amount must be greater than zero");
+    await expect(splitter.connect(customer).tipIndividual("Sam", usd(6))).to.be.reverted;
+    expect(await ausd.balanceOf(sam.address)).to.equal(0);
+  });
 });

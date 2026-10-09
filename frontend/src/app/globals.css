@@ -1402,14 +1402,15 @@ a.e-feed-amount:hover { text-decoration: underline; text-underline-offset: 3px; 
 .i-total-field.is-empty > span { color: #4a4458; }
 .i-page .pay-send:disabled:not(.is-busy) { opacity: 1; color: #8b8598; background: var(--pay-raised); box-shadow: inset 0 0 0 1px var(--pay-line); }
 
-/* Individual pages: the footer follows the content in the page's own flow, so a long card never runs under it. */
+/* Card pages (Send, My money, Tip, Merchant Portal, Employee Dashboard): the footer follows the content in the
+   page's own flow, so a long card never runs under it. */
 @media (min-width: 600px) {
-  body:has(.i-page) .site-main { flex: 1; display: flex; flex-direction: column; min-height: calc(100dvh - var(--header) - env(safe-area-inset-top, 0px) - var(--footer-h) - var(--bottom-pad)); }
-  body:has(.i-page) .site-footer { position: relative; }
+  body:has(.m-page) .site-main { flex: 1; display: flex; flex-direction: column; min-height: calc(100dvh - var(--header) - env(safe-area-inset-top, 0px) - var(--footer-h) - var(--bottom-pad)); }
+  body:has(.m-page) .site-footer { position: relative; }
 }
-@media (pointer: fine), (min-width: 1100px) { body:has(.i-page) .site-main { padding-bottom: var(--space-4); } }
+@media (pointer: fine), (min-width: 1100px) { body:has(.m-page) .site-main { padding-bottom: var(--space-4); } }
 /* Short laptop screens: a little less air around the card, so card and footer both fit. */
-@media (min-width: 600px) and (max-height: 700px) { .i-page { padding-block: var(--space-3); } }
+@media (min-width: 600px) and (max-height: 700px) { .m-page { padding-block: var(--space-3); } }
 @media (max-height: 620px) { .t-finder { max-height: 36vh; } }
 @media (min-width: 600px) and (max-height: 620px) { .i-page .e-photo { aspect-ratio: 2 / 1; } }
 /* Tip page on laptops and desktops: the footer follows the card instead of floating over it, so a card taller

@@ -63,7 +63,7 @@ function useDollars(address?: string) {
 /** `openOnMount`: the visitor clicked Connect before this (lazy-loaded) button arrived, so open straight away. */
 export default function ConnectButton({ openOnMount = false }: { openOnMount?: boolean }) {
   const reduce = useReducedMotion();
-  const { ready, authenticated, user, logout } = usePrivy();
+  const { ready, authenticated, user, logout, getAccessToken } = usePrivy();
   const { wallets: privyWallets } = useWallets();
   const { account: direct } = useDirectWallets();
   const signedOut = useSignedOut();
@@ -106,9 +106,11 @@ export default function ConnectButton({ openOnMount = false }: { openOnMount?: b
       (await (await provider()).request({ method: "eth_sendTransaction", params: [{ from: address, to: tx.to, data: tx.data }] })) as `0x${string}`;
     const sign = async (message: string) =>
       (await (await provider()).request({ method: "personal_sign", params: [stringToHex(message), address] })) as `0x${string}`;
-    publishWallet({ address: address as `0x${string}`, onMonad: onRightNetwork, send, sign, via: via ?? null });
+    // Only an email wallet made by Privy can have its first fee covered (the server checks it is theirs).
+    const token = !direct && privyWallet?.walletClientType === "privy" ? getAccessToken : null;
+    publishWallet({ address: address as `0x${string}`, onMonad: onRightNetwork, send, sign, via: via ?? null, token });
     return () => publishWallet(null);
-  }, [address, onRightNetwork, direct, privyWallet, via]);
+  }, [address, onRightNetwork, direct, privyWallet, via, getAccessToken]);
 
   // A new sign-in (not-connected → connected) clears the signed-out flag. Watching transitions, not state,
   // means the brief moment while a sign-out completes can't undo it.

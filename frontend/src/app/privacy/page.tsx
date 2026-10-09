@@ -40,6 +40,7 @@ export default function Page() {
               <tr><th scope="row">Your team&apos;s first names, wallets and groups</th><td data-label="Where it comes from">The business owner, in the Merchant Portal</td><td data-label="Why">So guests can tip a person by name, and team tips can be split</td><td data-label="Who else sees it">Public on Monad</td></tr>
               <tr><th scope="row">Payments: wallets, amounts and times</th><td data-label="Where it comes from">Monad</td><td data-label="Why">To show receipts, what you&apos;ve received and team tips</td><td data-label="Who else sees it">Public on Monad</td></tr>
               <tr><th scope="row">The name on your pay-me link</th><td data-label="Where it comes from">You, if you add one</td><td data-label="Why">To show on the link and code you share</td><td data-label="Who else sees it">Anyone you share the link with</td></tr>
+              <tr><th scope="row">Your sign-in session</th><td data-label="Where it comes from">Your browser, when Weep covers a network fee</td><td data-label="Why">To check the wallet receiving test MON is your own email wallet</td><td data-label="Who else sees it">Privy</td></tr>
               <tr><th scope="row">Technical data such as IP address and browser type</th><td data-label="Where it comes from">Your browser, automatically</td><td data-label="Why">To deliver the website, keep it working and stop abuse</td><td data-label="Who else sees it">Vercel, Privy and the Monad network endpoint</td></tr>
             </tbody>
           </table>
@@ -52,7 +53,7 @@ export default function Page() {
         <p>Monad is a public blockchain. Everything recorded on it can be seen by anyone, through the <a href="https://testnet.monadexplorer.com" target="_blank" rel="noreferrer">Monad testnet explorer</a>, and can&apos;t be changed or deleted, by us or anyone else. That includes:</p>
         <ul>
           <li>every payment: the wallets involved, the amount and the time;</li>
-          <li>for business pools: the first names, wallets and groups of the team, and each payout.</li>
+          <li>for business pools: which wallet created each pool, the first names, wallets and groups of the team, and each payout.</li>
         </ul>
         <p>Weep never writes emails to Monad. Each Send payment carries a reference code, which is a one-way fingerprint of its recipients and amounts and contains no names or emails.</p>
       </Part>

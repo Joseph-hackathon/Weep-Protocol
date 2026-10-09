@@ -17,9 +17,11 @@ export type WalletState = {
   sign: ((message: string) => Promise<`0x${string}`>) | null;
   /** How they signed in: their email, or their wallet's name. */
   via: string | null;
+  /** For email sign-ins: the Privy session token, which lets Weep cover their first network fee. */
+  token: (() => Promise<string | null>) | null;
 };
 
-const EMPTY: WalletState = { address: null, onMonad: false, send: null, sign: null, via: null };
+const EMPTY: WalletState = { address: null, onMonad: false, send: null, sign: null, via: null, token: null };
 let state: WalletState = EMPTY;
 const listeners = new Set<() => void>();
 

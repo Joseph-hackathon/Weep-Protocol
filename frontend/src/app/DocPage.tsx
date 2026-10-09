@@ -10,8 +10,8 @@ import DocSpy from "./DocSpy";
  * section in full. On wide screens the contents become a side rail that stays in view and marks where you are.
  * The canonical text lives in these pages; the README links here.
  */
-export const DOC_UPDATED = "8 October 2026";
-export const DOC_VERSION = "1.0";
+export const DOC_UPDATED = "9 October 2026";
+export const DOC_VERSION = "1.1";
 export const REPO = "https://github.com/Joseph-hackathon/Weep-Protocol";
 /** Where people reach the team. One place, so it can be changed once. */
 export const CONTACT = `${REPO}/issues`;

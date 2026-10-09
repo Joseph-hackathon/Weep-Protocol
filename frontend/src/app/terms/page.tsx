@@ -80,7 +80,7 @@ export default function Page() {
       </Part>
 
       <Part id="business" title="Business pools">
-        <p>A business&apos;s team tips are held by its pool contract until the business pays them out. The wallet that owns the pool, plus any agent it names, decides who&apos;s on the team, how tips are split and when they&apos;re paid out. If you run a pool, you&apos;re responsible for:</p>
+        <p>Every business that sets up a team gets its own tip pool on Monad, owned by the wallet that created it. Team tips are held by that pool until the business pays them out. The owner, plus any agent it names, decides who&apos;s on the team, how tips are split and when they&apos;re paid out. Weep can&apos;t change, pause or empty a business&apos;s pool. If you run a pool, you&apos;re responsible for:</p>
         <ul>
           <li>setting it up correctly and paying out promptly;</li>
           <li>following the tipping, employment and tax rules that apply to your business;</li>
@@ -102,7 +102,7 @@ export default function Page() {
       </Part>
 
       <Part id="fees" title="Fees">
-        <p>Weep charges no fees. The Monad network charges a small fee in MON for each transaction, paid from your wallet. On testnet, MON is free from the <a href="https://faucet.monad.xyz" target="_blank" rel="noreferrer">Monad faucet</a>.</p>
+        <p>Weep charges no fees. The Monad network charges a small fee in MON for each transaction. If you signed in with email, Weep may cover your first fees by sending a little test MON to your wallet; this is a courtesy that can stop at any time. Otherwise, MON is free on testnet from the <a href="https://faucet.monad.xyz" target="_blank" rel="noreferrer">Monad faucet</a>.</p>
       </Part>
 
       <Part id="third-parties" title="Services Weep relies on">
