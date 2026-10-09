@@ -58,10 +58,9 @@ flowchart TB
 | Chain access | RPC, explorer, call data, receipts (`transfersIn`), recent arrivals (`receivedRecently`) | [`chain.ts`](../frontend/src/app/chain.ts), [`pay.ts`](../frontend/src/app/pay.ts) |
 | Reading descriptions | One shared Gemini helper: structured JSON, model fallback, one retry, 20-second timeout | [`api/gemini.ts`](../frontend/src/app/api/gemini.ts) |
 | Sign-in | Weep's own window: email code or wallet; Privy underneath | [`ConnectModal.tsx`](../frontend/src/app/ConnectModal.tsx), [`providers.tsx`](../frontend/src/app/providers.tsx) |
-| WeepPay | `pay(to[], amounts[], total, ref)`: exact, all-or-nothing, ≤ 100 recipients, no owner | [`WeepPay.sol`](../contracts/contracts/WeepPay.sol) |
-| WeepPools | Gives every business its own pool: `create(split, team)` clones TipPool, one per owner, at an address known in advance (`predict`). No owner | [`WeepPools.sol`](../contracts/contracts/WeepPools.sol) |
-| TipPool | One business's pool: team, split, `tipIndividual`, `payoutTeam`, `configure` (split and team in one call) | [`TipPool.sol`](../contracts/contracts/TipPool.sol) |
-| TipSplitter | The first, shared pool, kept readable for older codes | [`TipSplitter.sol`](../contracts/contracts/TipSplitter.sol) |
+| WeepPay | `pay(to[], amounts[], total, expectedFee, ref)`: exact, all-or-nothing, ≤ 100 recipients, 0.3% fee on top (fixed at deployment), no owner | [`WeepPay.sol`](../contracts/contracts/WeepPay.sol) |
+| WeepPools | Gives every business its own pool: `create(split, team)` clones TipPool, one per owner, at an address known in advance (`predict`). Holds the token, fee rate (0.5%) and fee recipient every pool copies. No owner | [`WeepPools.sol`](../contracts/contracts/WeepPools.sol) |
+| TipPool | One business's pool: `tipIndividual(name, expectedWallet, amount, expectedFee)`, `tipTeam(amount, expectedFee)`, `payoutTeam()` (anyone), `configure` (owner: split and team in one call). Team capped at 100; token-moving functions guarded against re-entry | [`TipPool.sol`](../contracts/contracts/TipPool.sol) |
 | Business links | Table codes and links carry the business's pool (`/customer?pool=0x…`); checked against WeepPools before use and remembered on the device | [`pool-link.ts`](../frontend/src/app/pool-link.ts) |
 | First-fee cover | An email wallet that's low on MON gets 0.1 test MON from Weep's sponsor wallet before its first transaction | [`gas.ts`](../frontend/src/app/gas.ts), [`api/gas`](../frontend/src/app/api/gas/route.ts) |
 
@@ -96,8 +95,8 @@ sequenceDiagram
   opt balance short (testnet only)
     UI->>W: AUSD.mint(sender, top-up)
   end
-  UI->>W: AUSD.approve(WeepPay, exact total)
-  UI->>W: WeepPay.pay(wallets, amounts, total, ref)
+  UI->>W: AUSD.approve(WeepPay, exact total + fee)
+  UI->>W: WeepPay.pay(wallets, amounts, total, fee, ref)
   W->>M: one transaction
   M-->>UI: receipt
   UI->>M: read Transfer logs of that transaction
@@ -114,9 +113,9 @@ sequenceDiagram
    3. `/api/setup/wallets` creates wallets for every email. The request names the pool and is signed by its owner, or, before it exists, by the wallet whose pool `WeepPools.predict` puts at that address. The server checks both on Monad.
    4. One confirmation: `WeepPools.create(split, names, wallets, groups)` the first time, or `TipPool.configure(...)` to change it later.
    5. The live screen shows the table code: `/customer?pool=<the business's pool>`.
-2. **Tip a person** (Customer, opened from that code). The page checks with WeepPools that the pool is real. The guest approves exactly the tip, and `tipIndividual(name, amount)` moves it straight from the guest to that person's wallet.
-3. **Tip the team** (Customer). The guest transfers AUSD to the business's pool.
-4. **Pay out** (Merchant Portal). The owner calls `payoutTeam()`.
+2. **Tip a person** (Customer, opened from that code). The page checks with WeepPools that the pool is real and reads its fee. The guest sees the 0.5% fee, approves exactly the tip plus the fee, and `tipIndividual(name, wallet, amount, fee)` moves the tip straight to that person and the fee to Weep. If the name now points to a different wallet than the guest saw, or the fee differs, nothing moves.
+3. **Tip the team** (Customer). The guest approves the tip plus the fee, and `tipTeam(amount, fee)` moves the tip into the business's pool and the fee to Weep.
+4. **Pay out** (Merchant Portal, or anyone from the table code's *Split details*). Anyone can call `payoutTeam()`; it only pays the saved team.
    - The pool is split by policy among groups that have people.
    - Each group's share is split evenly within the group.
    - Any remainder from integer division (well under a cent) stays for the next payout.
@@ -142,7 +141,9 @@ If fixed and percentage amounts exceed the total, or nothing is left for equal r
 |---|---|---|
 | Sender | Pay anyone up to the amount their wallet allowed | Spend another wallet's funds |
 | WeepPay | Move a sender's AUSD within the allowance the sender gave, in a payment the sender signed | Hold funds, be paused, be upgraded, or be controlled by anyone (it has no owner) |
-| A business (pool owner, or an agent it names) | Set its own pool's team and split, pay out its own pool | Touch any other business's pool; take a tip sent to a person by name, which never enters the pool |
+| A business (pool owner) | Set its own pool's team and split | Touch any other business's pool; take a tip sent to a person by name, which never enters the pool; change the fee |
+| Anyone | Pay a pool out | Choose who gets paid: a payout only ever goes to the saved team, by the saved split |
+| Weep (fee recipient) | Receive the fee set at deployment | Change the fee rate or recipient, or touch any payment or pool |
 | WeepPools | Create one pool per business, owned by that business | Change, pause or drain any pool (it has no owner and no admin functions) |
 | Weep server | Ask Privy for wallets for emails a signer named; read text with Gemini; send 0.1 test MON to a signed-in person's own email wallet when it's low | Sign transactions for anyone, hold their keys, or move their funds |
 | Privy | Create and link non-custodial wallets to emails; run sign-in | Spend from a user's wallet (non-custodial) |
@@ -151,7 +152,7 @@ If fixed and percentage amounts exceed the total, or nothing is left for equal r
 Abuse controls on the server routes:
 
 - Email lookups need a fresh signature (under 10 minutes old) over the exact sorted emails, with at most 100 emails per request.
-- Team wallets need the pool owner's or agent's signature, with at most 50 emails.
+- Team wallets need the pool owner's signature (or, before the pool exists, the signature of the wallet whose pool will be created there), with at most 50 emails.
 - Descriptions are limited to 6,000 characters for Send and 4,000 for the Merchant Portal.
 - First-fee cover needs a valid Privy session for the wallet's owner, applies only to Privy email wallets holding under 0.05 MON with fewer than 20 transactions, and stops if the sponsor would fall below 1 MON.
 
@@ -177,13 +178,17 @@ Weep's server keeps no data. Privy holds sign-in emails and their wallets. Monad
 
 | Decision | Why | Trade-off |
 |---|---|---|
-| A separate WeepPay contract for individuals, instead of extending TipSplitter | Paying people should need no owner, no registry and no pool. One short function anyone can read, with no admin keys. | Two contracts to explain |
+| A separate WeepPay contract for individuals, instead of a pool | Paying people should need no owner, no registry and no pool. One short function anyone can read, with no admin keys. | Two contracts to explain |
 | The AI drafts, code calculates | Language models can misread, but they shouldn't do arithmetic on money. Deterministic rules make every cent reproducible. | The AI can't express rules outside fixed, percentage and equal |
 | Emails resolved to Privy wallets at send time | Anyone with an email can be paid, with nothing to claim and no custody | Relies on Privy; Weep doesn't notify recipients |
 | One signature authorizes an email lookup | Stops anonymous mass account creation, without accounts or API keys | One extra wallet prompt when paying emails |
 | Receipts read from `Transfer` logs | The receipt shows what actually happened on-chain, not what the app intended | One extra RPC read after each payment |
 | No server database | Nothing to leak, migrate or keep in sync; Monad is the record | In-app history covers recent blocks; full history is on the explorer |
-| Exact-total approval | A compromised website could never spend more than the reviewed total | One approval per payment when the allowance runs out |
+| Exact-total approval | A compromised website could never spend more than the reviewed total plus fee | One approval per payment when the allowance runs out |
+| Fee on top, fixed at deployment | Recipients and staff always get 100% of the stated amount; nobody, including Weep, can raise the fee later; the payer's reviewed fee must match | A new rate means new contracts |
+| Named tips carry the wallet the guest saw | A business can't redirect a tip in flight by repointing a name | A guest who reviewed an old team must reload |
+| Anyone can pay a pool out | Staff don't depend on the owner to release tips; the money can only go to the saved team | None that we know of: the caller gains nothing |
+| No `agent` role | Nothing in the app ever named one; fewer roles, smaller surface | A business that wants a helper shares the owner wallet |
 | A pool per business from a factory, as minimal clones | Any business can try the full flow and owns its pool outright; a clone costs about 0.05 MON to create instead of about 0.36 MON for a full contract; a predictable address lets the team's wallets be approved first | Pools can't be upgraded; a new version means a new factory |
 | Cover the first fee for email sign-ins | A first payment needs nothing but an email: no faucet, no tokens to find | A funded sponsor wallet on the server; abuse limited by session, wallet type, balance and transaction count |
 
@@ -191,8 +196,9 @@ Weep's server keeps no data. Privy holds sign-in emails and their wallets. Monad
 
 ```text
 contracts/            Solidity contracts, Hardhat tests, deploy scripts
-  contracts/          WeepPay.sol · WeepPools.sol · TipPool.sol · TipSplitter.sol · MockAUSD.sol
-  test/               WeepPay.test.js · WeepPools.test.js · TipSplitter.test.js
+  contracts/          WeepPay.sol · WeepPools.sol · TipPool.sol · MockAUSD.sol · mocks/ReentrantToken.sol (tests only)
+  scripts/            deploy-all.js · retire-shared-pool.js
+  test/               WeepPay.test.js · WeepPools.test.js
 frontend/             Next.js app (App Router)
   src/app/            pages, components, chain and amount logic
   src/app/api/        send/{parse,wallets} · setup/{parse,wallets} · gas

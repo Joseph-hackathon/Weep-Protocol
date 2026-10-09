@@ -52,7 +52,7 @@ export default function Page() {
       <Part id="public" title="What is public on Monad">
         <p>Monad is a public blockchain. Everything recorded on it can be seen by anyone, through the <a href="https://testnet.monadexplorer.com" target="_blank" rel="noreferrer">Monad testnet explorer</a>, and can&apos;t be changed or deleted, by us or anyone else. That includes:</p>
         <ul>
-          <li>every payment: the wallets involved, the amount and the time;</li>
+          <li>every payment: the wallets involved, the amount, Weep&apos;s fee and the time;</li>
           <li>for business pools: which wallet created each pool, the first names, wallets and groups of the team, and each payout.</li>
         </ul>
         <p>Weep never writes emails to Monad. Each Send payment carries a reference code, which is a one-way fingerprint of its recipients and amounts and contains no names or emails.</p>

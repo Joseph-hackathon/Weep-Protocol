@@ -824,6 +824,14 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
 .pay-input { min-width: 1ch; max-width: 6ch; padding: 0; border: 0; outline: 0; background: transparent; color: inherit; font: inherit; letter-spacing: inherit; caret-color: var(--pay-lime); }
 .pay-input::placeholder { color: #3f3a4f; }
 .pay-balance { display: flex; justify-content: center; align-items: center; gap: var(--space-2); min-height: 24px; margin-top: calc(-1 * var(--space-2)); font-size: 12px; line-height: 16px; color: #a1a1aa; font-variant-numeric: tabular-nums; }
+/* Weep's fee, shown before signing: one quiet line under the balance */
+.pay-fee { margin-top: calc(-1 * var(--space-3)); text-align: center; font-size: 12px; line-height: 16px; color: #a1a1aa; font-variant-numeric: tabular-nums; }
+/* Anyone can pay the pool out: who gets what, then one button */
+.pay-payout { display: flex; flex-direction: column; gap: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--pay-well-line); }
+.pay-payout ul { display: flex; flex-direction: column; gap: 2px; }
+.pay-payout li { display: flex; justify-content: space-between; font-size: 12px; line-height: 18px; color: #d4d4d8; font-variant-numeric: tabular-nums; }
+.pay-payout-btn { align-self: flex-start; }
+.pay-payout-error { color: #f97066 !important; }
 .pay-max { height: 24px; padding: 0 var(--space-2); border-radius: var(--radius-1); cursor: pointer; font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--pay-lime); background: transparent; border: 1px solid rgba(162, 233, 128, .45); }
 .pay-max:hover { background: rgba(162, 233, 128, .1); }
 

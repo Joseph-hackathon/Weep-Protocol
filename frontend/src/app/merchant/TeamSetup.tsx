@@ -393,7 +393,7 @@ export default function TeamSetup() {
                     {payout.error && <p className="m-error" role="alert">{payout.error}</p>}
                   </>
                 ) : (
-                  <p className="m-quiet">New team tips gather here until you pay them out.</p>
+                  <p className="m-quiet">New team tips gather here. You, or anyone, can pay them out to the team by the split.</p>
                 )}
               </section>
             )}

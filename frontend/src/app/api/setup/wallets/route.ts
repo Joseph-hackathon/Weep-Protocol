@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { PrivyClient } from "@privy-io/server-auth";
 import { createPublicClient, http, parseAbi, verifyMessage } from "viem";
 import { monadTestnet } from "viem/chains";
-import { SHARED_POOL, WEEP_POOLS, setupMessage } from "../../../setup-message";
+import { WEEP_POOLS, setupMessage } from "../../../setup-message";
 
 /**
  * One-prompt team setup, step 2: make sure every employee has a wallet before they ever sign in.
@@ -10,14 +10,14 @@ import { SHARED_POOL, WEEP_POOLS, setupMessage } from "../../../setup-message";
  * employee unlocks it later by signing in with that email).
  *
  * Only the business's own wallet may do this, for its own pool: the request carries a message signed by the
- * pool's owner or agent, or, before the pool exists, by the wallet whose pool will be created at that address.
+ * pool's owner, or, before the pool exists, by the wallet whose pool will be created at that address.
  */
 const APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID || "cmujnrzih03xh0dl9k6itwgws";
 const MAX_PEOPLE = 50;
 const MAX_AGE_MS = 10 * 60 * 1000;
 
 const client = createPublicClient({ chain: monadTestnet, transport: http(process.env.NEXT_PUBLIC_MONAD_RPC || undefined) });
-const roles = parseAbi(["function owner() view returns (address)", "function agent() view returns (address)"]);
+const roles = parseAbi(["function owner() view returns (address)"]);
 const factory = parseAbi(["function isPool(address) view returns (bool)", "function predict(address) view returns (address)"]);
 const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 
@@ -59,18 +59,13 @@ export async function POST(req: Request) {
   return NextResponse.json({ wallets: out });
 }
 
-/** True when `signer` owns or is the agent of `pool` (a Weep pool), or `pool` is the address of the signer's own pool yet to be created. */
+/** True when `signer` owns `pool` (a pool made by WeepPools), or `pool` is where the signer's own pool is about to be created. */
 async function runsPool(signer: `0x${string}`, pool: `0x${string}`) {
-  const me = signer.toLowerCase();
-  const target = pool.toLowerCase();
   const [created, predicted] = await Promise.all([
     client.readContract({ address: WEEP_POOLS, abi: factory, functionName: "isPool", args: [pool] }),
     client.readContract({ address: WEEP_POOLS, abi: factory, functionName: "predict", args: [signer] }),
   ]);
-  if (!created && target !== SHARED_POOL.toLowerCase()) return predicted.toLowerCase() === target;
-  const [owner, agent] = await Promise.all([
-    client.readContract({ address: pool, abi: roles, functionName: "owner" }),
-    client.readContract({ address: pool, abi: roles, functionName: "agent" }),
-  ]);
-  return me === owner.toLowerCase() || me === agent.toLowerCase();
+  if (!created) return predicted.toLowerCase() === pool.toLowerCase();
+  const owner = await client.readContract({ address: pool, abi: roles, functionName: "owner" });
+  return signer.toLowerCase() === owner.toLowerCase();
 }

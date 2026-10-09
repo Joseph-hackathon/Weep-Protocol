@@ -5,7 +5,8 @@ import { ausdBalance, isKnownPool, isWeepPool, receivedRecently, toDollars } fro
 
 /**
  * What a wallet holds and what reached it: shared by My money (individuals) and the Employee Dashboard
- * (a business's staff), so both read the same Monad data the same way.
+ * (a business's staff), so both read the same Monad data the same way. Payments from a business's tip pool
+ * read "team tips".
  *   balance — live, in dollars
  *   list    — every payment in: amount, sender, the time Monad recorded, and its transaction;
  *             read from the chain while the page is open and remembered on this device

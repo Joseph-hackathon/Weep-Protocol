@@ -90,7 +90,7 @@ The signed message is built by [`sendMessage`](../frontend/src/app/send-message.
 
 ```text
 Weep: reach these people by email
-Payments: 0xa0209c2245FdD5928a7a602a2d4c7d4239CF5A26
+Payments: <WeepPay address, NEXT_PUBLIC_WEEP_PAY>
 Emails: ama@example.com, kai@example.com
 Issued: 2026-10-08T21:00:00.000Z
 ```
@@ -103,7 +103,8 @@ import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
 const account = privateKeyToAccount(generatePrivateKey()); // any wallet can ask
 const emails = ["ama@example.com", "kai@example.com"];
 const issuedAt = new Date().toISOString();
-const message = `Weep: reach these people by email\nPayments: 0xa0209c2245FdD5928a7a602a2d4c7d4239CF5A26\nEmails: ${[...emails].sort().join(", ")}\nIssued: ${issuedAt}`;
+const PAY = "0x…"; // the live WeepPay address (NEXT_PUBLIC_WEEP_PAY)
+const message = `Weep: reach these people by email\nPayments: ${PAY}\nEmails: ${[...emails].sort().join(", ")}\nIssued: ${issuedAt}`;
 
 const res = await fetch("https://weep-protocol.vercel.app/api/send/wallets", {
   method: "POST",
@@ -178,7 +179,7 @@ curl -s https://weep-protocol.vercel.app/api/setup/parse \
 
 Makes sure every person on a business's team has a wallet before they ever sign in. A business may only do this for its own pool. The server accepts the signer if either:
 
-- the signer is the pool's `owner()` or `agent()`, for a pool created by WeepPools (or the first shared pool); or
+- the signer is the pool's `owner()`, for a pool created by WeepPools; or
 - the pool doesn't exist yet and `WeepPools.predict(signer)` equals it, meaning the signer's own pool is about to be created there.
 
 **Request**: the same fields as [`/api/send/wallets`](#post-apisendwallets), with 1–50 emails, plus:

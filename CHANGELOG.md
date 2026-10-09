@@ -2,6 +2,28 @@
 
 User-visible changes to Weep, newest first. Everything below was built during Monad Metropolis (1 September – 13 October 2026).
 
+## Unreleased: business model, safer pools and final cleanup
+
+These need new contracts. They go live once the steps in [HANDOFF.md](HANDOFF.md) are done.
+
+### Added
+- **Weep's fee.** 0.3% on personal payments (WeepPay) and 0.5% on business tips (TipPool), paid on top by the payer, so recipients and staff receive 100%. Each rate and recipient is fixed at deployment (at most 1%). Every payment or tip must carry the fee the payer reviewed. The fee is shown before signing, and receipts read it back from Monad.
+- **`tipTeam`.** Team tips now go through the pool contract, so the fee is enforced.
+- **Payouts by anyone.** Anyone can pay a pool out, from the table code's *Split details*, after seeing who gets what. It only ever pays the saved team.
+- **Safer named tips.** A named tip carries the wallet the guest saw, and is refused if the name was repointed since.
+- **Re-entrancy guards** on every function that moves tokens, tested with a hostile token. Teams are capped at 100.
+- **`deploy-all.js`** (both contracts, fees from code, recipient from `FEE_RECIPIENT`) and **`retire-shared-pool.js`**.
+- **30 contract tests**, covering 100% of lines and 90.9% of branches.
+
+### Changed
+- `/customer` without a table code asks for one, instead of opening the first shared pool.
+- A production build stops if the contract addresses aren't set, so a half-configured deploy never goes live.
+
+### Removed
+- The `agent` role. Nothing in the app ever set one.
+- The first shared pool (TipSplitter) and its test, the old deploy scripts, and two unused workflow experiments.
+- Generated coding-assistant files from the frontend folder.
+
 ## 2026-10-09
 
 ### Added
@@ -15,7 +37,7 @@ User-visible changes to Weep, newest first. Everything below was built during Mo
 - On laptop screens, the footer no longer overlaps the Merchant Portal and Employee Dashboard cards.
 
 ### Removed
-- Early experiments that returned made-up data (`/api/policy`, `/api/nansen`, `/api/logs`, `/api/merchant/setup`), their database files and unused images.
+- Early experiment routes that returned made-up data, their database files and unused images.
 
 ## 2026-10-08
 

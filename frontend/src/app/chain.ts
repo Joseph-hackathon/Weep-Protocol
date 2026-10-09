@@ -1,4 +1,4 @@
-import { SHARED_POOL, WEEP_POOLS } from "./setup-message";
+import { WEEP_POOLS } from "./setup-message";
 
 /**
  * Read-only access to Weep on Monad testnet with plain JSON-RPC (no wallet library, ~1 KB), plus the
@@ -7,16 +7,16 @@ import { SHARED_POOL, WEEP_POOLS } from "./setup-message";
 export const RPC = process.env.NEXT_PUBLIC_MONAD_RPC || "https://testnet-rpc.monad.xyz";
 export const EXPLORER = "https://testnet.monadexplorer.com";
 export const FAUCET = "https://faucet.monad.xyz";
-/** The first, shared tip pool; each business now gets its own pool from WEEP_POOLS (setup-message.ts). */
-export const SPLITTER = SHARED_POOL;
+/** Every business's tip pool comes from WEEP_POOLS (setup-message.ts). */
 export { WEEP_POOLS };
 /** Agora USD (test), 18 decimals; set NEXT_PUBLIC_AUSD if a new pool uses a new token. */
 export const AUSD = (process.env.NEXT_PUBLIC_AUSD || "0xcEF38D455529Dbc2e37654452C288C25e18ADea4") as `0x${string}`;
 
 const SEL = {
   currentPolicy: "0xc7d29856", balanceOf: "0x70a08231", transfer: "0xa9059cbb", mint: "0x40c10f19",
-  owner: "0x8da5cb5b", agent: "0xf5ff5c76", getTeam: "0x8bce6edd", approve: "0x095ea7b3", allowance: "0xdd62ed3e",
-  tipIndividual: "0xefb301a4", poolOf: "0x988b1fa7", isPool: "0x5b16ebb7", predict: "0x901b96e7",
+  getTeam: "0x8bce6edd", approve: "0x095ea7b3", allowance: "0xdd62ed3e",
+  tipIndividual: "0x9c09a53e", tipTeam: "0x5e3fbb95", payoutTeam: "0x6c0641ca",
+  poolOf: "0x988b1fa7", isPool: "0x5b16ebb7", predict: "0x901b96e7", feeBps: "0x24a9d853", feeRecipient: "0x46904840",
 };
 const word = (hex: string) => hex.replace(/^0x/, "").padStart(64, "0");
 
@@ -41,17 +41,26 @@ export async function monBalance(owner: string) {
   return BigInt(await rpc<string>("eth_getBalance", [owner, "latest"]));
 }
 
-/** Who runs the pool: only the owner or the agent may change the rule or register the team. */
-export async function readRoles(pool: string) {
-  const [o, a] = await Promise.all([call(pool, SEL.owner), call(pool, SEL.agent)]);
-  const addr = (r: string) => ("0x" + r.slice(-40)).toLowerCase();
-  return { owner: addr(o), agent: addr(a) };
+/**
+ * Weep's fee on a contract (WeepPay, or a business's pool): its rate in basis points and who receives it, read
+ * from Monad. Both are fixed in the contract; the fee is paid on top, so recipients always get 100%.
+ */
+export type Fee = { bps: bigint; recipient: string };
+export async function readFee(contract: string): Promise<Fee> {
+  const [b, r] = await Promise.all([call(contract, SEL.feeBps), call(contract, SEL.feeRecipient)]);
+  return { bps: BigInt(b), recipient: ("0x" + r.slice(-40)).toLowerCase() };
 }
-/** Whether the deployed pool keeps the team on-chain (getTeam / setTeam / tipIndividual / payoutTeam). */
-export async function supportsTeam(pool: string) {
-  if (await isWeepPool(pool) && pool.toLowerCase() !== SPLITTER.toLowerCase()) return true; // every pool from WEEP_POOLS keeps its team
-  const code = await rpc<string>("eth_getCode", [pool, "latest"]);
-  return code.toLowerCase().includes(SEL.getTeam.slice(2));
+/** The fee on `units`, exactly as the contract works it out (rounded down). */
+export const feeOn = (units: bigint, fee: Fee) => (units * fee.bps) / BigInt(10_000);
+/** "0.3%" from 30 basis points. */
+export const feeRate = (fee: Fee) => `${Number(fee.bps) / 100}%`;
+/**
+ * Dollars for a fee, exactly: whole cents when it is, otherwise up to 5 decimals (0.3% of $33.33 is $0.09999),
+ * so a fee is never shown rounded. On whole-cent amounts every fee here is a whole number of 1/100,000 dollars.
+ */
+export function feeDollars(units: bigint) {
+  const d = Number(units / BigInt(10) ** BigInt(13)) / 100_000;
+  return `$${d.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 5 })}`;
 }
 
 const asAddress = (r: string) => ("0x" + r.slice(-40)).toLowerCase();
@@ -65,8 +74,8 @@ export async function poolOf(owner: string): Promise<string | null> {
 export async function predictPool(owner: string) {
   return asAddress(await call(WEEP_POOLS, SEL.predict + word(owner)));
 }
-const known = new Map<string, boolean>([[SPLITTER.toLowerCase(), true]]);
-/** Whether an address is a real Weep pool (made by WEEP_POOLS, or the first shared pool). Cached. */
+const known = new Map<string, boolean>();
+/** Whether an address is a real Weep pool (made by WEEP_POOLS). Cached. */
 export async function isWeepPool(addr: string) {
   const a = addr.toLowerCase();
   if (!known.has(a)) known.set(a, BigInt(await call(WEEP_POOLS, SEL.isPool + word(a))) === BigInt(1));
@@ -104,12 +113,20 @@ export const toDollars = (units: bigint) => Number(units / BASIS) / 10000;
 
 export const transferData = (to: string, units: bigint) => (SEL.transfer + word(to) + word(units.toString(16))) as `0x${string}`;
 export const approveData = (spender: string, units: bigint) => (SEL.approve + word(spender) + word(units.toString(16))) as `0x${string}`;
-/** tipIndividual(string name, uint256 amount): the tip goes straight from the customer to that person. */
-export function tipIndividualData(name: string, units: bigint) {
+/**
+ * tipIndividual(string name, address expectedWallet, uint256 amount, uint256 expectedFee): the tip goes straight
+ * from the guest to that person. The wallet and fee are the ones the guest saw; if either changed, nothing moves.
+ */
+export function tipIndividualData(name: string, wallet: string, units: bigint, fee: bigint) {
   const bytes = Array.from(new TextEncoder().encode(name), (b) => b.toString(16).padStart(2, "0")).join("");
   const padded = bytes.padEnd(Math.ceil(bytes.length / 64) * 64, "0");
-  return (SEL.tipIndividual + word("40") + word(units.toString(16)) + word((bytes.length / 2).toString(16)) + padded) as `0x${string}`;
+  return (SEL.tipIndividual + word("80") + word(wallet.toLowerCase()) + word(units.toString(16)) + word(fee.toString(16))
+    + word((bytes.length / 2).toString(16)) + padded) as `0x${string}`;
 }
+/** tipTeam(uint256 amount, uint256 expectedFee): the tip waits in the pool until it's paid out by the split. */
+export const tipTeamData = (units: bigint, fee: bigint) => (SEL.tipTeam + word(units.toString(16)) + word(fee.toString(16))) as `0x${string}`;
+/** payoutTeam(): anyone can pay the pool out; it only ever pays the saved team, by the saved split. */
+export const payoutData = SEL.payoutTeam as `0x${string}`;
 export const mintData = (to: string, units: bigint) => (SEL.mint + word(to) + word(units.toString(16))) as `0x${string}`;
 
 /** Wait until a transaction is included; resolves true on success, false on revert. */

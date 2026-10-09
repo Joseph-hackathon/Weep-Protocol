@@ -3,16 +3,31 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+/// @dev The fixed settings every pool copies from the factory that creates it (WeepPools).
+interface IPoolSettings {
+    function token() external view returns (IERC20);
+    function feeBps() external view returns (uint256);
+    function feeRecipient() external view returns (address);
+}
 
 /**
  * @title TipPool
  * @notice One business's tip pool: its team (names, wallets, groups), how team tips are split between the
- * floor, kitchen and bar, tips to one person by name, and payouts. Each business gets its own copy, created by
- * WeepPools as a minimal clone, so any venue can set up in one transaction and only it controls its pool.
- * The functions the app uses match the original TipSplitter, so one interface serves both.
+ * floor, kitchen and bar, tips to one person by name, team tips, and payouts. Each business gets its own copy,
+ * created by WeepPools as a minimal clone and owned by the business's wallet.
+ *
+ * Money rules:
+ *  - Weep's fee is paid on top by the guest; the person or the team always receives 100% of the tip.
+ *  - The fee rate and recipient are copied once from WeepPools' fixed settings, and can't be changed.
+ *  - A guest's tip is checked against what they reviewed: the fee, and for a named tip the person's wallet.
+ *  - Anyone can pay the pool out, but only to the saved team, by the saved split.
  */
-contract TipPool {
+contract TipPool is ReentrancyGuard {
     using SafeERC20 for IERC20;
+
+    uint256 public constant MAX_TEAM = 100;
 
     struct Policy {
         uint256 fohRatio; // floor (front of house), percent
@@ -28,20 +43,21 @@ contract TipPool {
 
     IERC20 public ausdToken;
     address public owner;
-    address public agent;
+    uint256 public feeBps;
+    address public feeRecipient;
     Policy public currentPolicy;
     mapping(string => address) public employeeWallets;
     Member[] private team;
 
-    event TipDistributed(uint256 totalAmount, uint256 fohAmount, uint256 bohAmount, uint256 barAmount);
+    event TipDistributed(address indexed by, uint256 totalAmount, uint256 fohAmount, uint256 bohAmount, uint256 barAmount);
     event PolicyUpdated(uint256 foh, uint256 boh, uint256 bar);
     event EmployeeRegistered(string identifier, address wallet);
-    event IndividualTip(string identifier, address wallet, uint256 amount);
+    event IndividualTip(string identifier, address wallet, uint256 amount, uint256 fee);
+    event TeamTip(address indexed from, uint256 amount, uint256 fee);
     event TeamSet(uint256 size);
-    event AgentSet(address agent);
 
-    modifier onlyAgentOrOwner() {
-        require(msg.sender == owner || (agent != address(0) && msg.sender == agent), "Not authorized");
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not authorized");
         _;
     }
 
@@ -50,41 +66,32 @@ contract TipPool {
         owner = address(this);
     }
 
-    /// @notice Called once by WeepPools in the same transaction that creates the clone.
+    /**
+     * @notice Called once by WeepPools in the same transaction that creates the clone. The token, the fee rate
+     * and the fee recipient are read from the calling factory's fixed settings, so they can't be chosen here.
+     */
     function initialize(
-        IERC20 token,
         address _owner,
         uint256 foh, uint256 boh, uint256 bar,
         string[] calldata names, address[] calldata wallets, uint8[] calldata groups
     ) external {
         require(owner == address(0), "Already set up");
         require(_owner != address(0), "No owner");
-        ausdToken = token;
+        IPoolSettings factory = IPoolSettings(msg.sender);
+        ausdToken = factory.token();
+        feeBps = factory.feeBps();
+        feeRecipient = factory.feeRecipient();
         owner = _owner;
         _setPolicy(foh, boh, bar);
         _setTeam(names, wallets, groups);
     }
 
-    function setAgent(address _agent) external {
-        require(msg.sender == owner, "Not authorized");
-        agent = _agent;
-        emit AgentSet(_agent);
-    }
-
-    /// @notice Change the split and the whole team in one transaction.
+    /// @notice Change the split and the whole team in one transaction. Owner only.
     function configure(
         uint256 foh, uint256 boh, uint256 bar,
         string[] calldata names, address[] calldata wallets, uint8[] calldata groups
-    ) external onlyAgentOrOwner {
+    ) external onlyOwner {
         _setPolicy(foh, boh, bar);
-        _setTeam(names, wallets, groups);
-    }
-
-    function updatePolicy(uint256 foh, uint256 boh, uint256 bar) external onlyAgentOrOwner {
-        _setPolicy(foh, boh, bar);
-    }
-
-    function setTeam(string[] calldata names, address[] calldata wallets, uint8[] calldata groups) external onlyAgentOrOwner {
         _setTeam(names, wallets, groups);
     }
 
@@ -92,21 +99,42 @@ contract TipPool {
         return team;
     }
 
-    /// @notice A tip to one person by name goes straight from the guest to them, 100%; it never enters the pool.
-    function tipIndividual(string calldata identifier, uint256 amount) external {
-        address recipient = employeeWallets[identifier];
-        require(recipient != address(0), "Employee not registered");
-        require(amount > 0, "Amount must be greater than zero");
-        ausdToken.safeTransferFrom(msg.sender, recipient, amount);
-        emit IndividualTip(identifier, recipient, amount);
+    /// @notice Weep's fee on a tip of `amount`, rounded down. Paid on top by the guest.
+    function feeFor(uint256 amount) public view returns (uint256) {
+        return (amount * feeBps) / 10_000;
     }
 
     /**
-     * @notice Pay the whole pool to the team by the split, evenly within each group. A group with nobody in it
-     * hands its share to the groups that have people. A remainder from rounding (well under a cent) stays for
-     * the next payout.
+     * @notice A tip to one person by name: 100% straight from the guest to them, never through the pool.
+     * @param expectedWallet the wallet the guest saw for that name; if the team changed since, nothing moves
+     * @param expectedFee    the fee the guest reviewed
      */
-    function payoutTeam() external onlyAgentOrOwner {
+    function tipIndividual(string calldata identifier, address expectedWallet, uint256 amount, uint256 expectedFee) external nonReentrant {
+        address recipient = employeeWallets[identifier];
+        require(recipient != address(0), "Employee not registered");
+        require(recipient == expectedWallet, "Recipient changed");
+        require(amount > 0, "Amount must be greater than zero");
+        uint256 fee = _checkedFee(amount, expectedFee);
+        ausdToken.safeTransferFrom(msg.sender, recipient, amount);
+        if (fee > 0) ausdToken.safeTransferFrom(msg.sender, feeRecipient, fee);
+        emit IndividualTip(identifier, recipient, amount, fee);
+    }
+
+    /// @notice A tip to the whole team: it waits in the pool until it's paid out by the split.
+    function tipTeam(uint256 amount, uint256 expectedFee) external nonReentrant {
+        require(amount > 0, "Amount must be greater than zero");
+        uint256 fee = _checkedFee(amount, expectedFee);
+        ausdToken.safeTransferFrom(msg.sender, address(this), amount);
+        if (fee > 0) ausdToken.safeTransferFrom(msg.sender, feeRecipient, fee);
+        emit TeamTip(msg.sender, amount, fee);
+    }
+
+    /**
+     * @notice Pay the whole pool to the saved team by the saved split, evenly within each group. Anyone can call
+     * it: the money can only go to the team. A group with nobody in it hands its share to the groups that have
+     * people. A remainder from rounding (well under a cent) stays for the next payout.
+     */
+    function payoutTeam() external nonReentrant {
         uint256 totalPool = ausdToken.balanceOf(address(this));
         require(totalPool > 0, "No tips to distribute");
         require(team.length > 0, "No team");
@@ -125,7 +153,12 @@ contract TipPool {
             uint256 share = totals[g] / counts[g];
             if (share > 0) ausdToken.safeTransfer(team[i].wallet, share);
         }
-        emit TipDistributed(totalPool, totals[0], totals[1], totals[2]);
+        emit TipDistributed(msg.sender, totalPool, totals[0], totals[1], totals[2]);
+    }
+
+    function _checkedFee(uint256 amount, uint256 expectedFee) private view returns (uint256 fee) {
+        fee = feeFor(amount);
+        require(fee == expectedFee, "Fee mismatch");
     }
 
     function _setPolicy(uint256 foh, uint256 boh, uint256 bar) private {
@@ -136,7 +169,7 @@ contract TipPool {
 
     function _setTeam(string[] calldata names, address[] calldata wallets, uint8[] calldata groups) private {
         require(names.length == wallets.length && names.length == groups.length, "Length mismatch");
-        require(names.length <= 100, "Too many people");
+        require(names.length <= MAX_TEAM, "Too many people");
         for (uint256 i = 0; i < team.length; i++) delete employeeWallets[team[i].name];
         delete team;
         for (uint256 i = 0; i < names.length; i++) {
