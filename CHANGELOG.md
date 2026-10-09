@@ -9,7 +9,7 @@ User-visible changes to Weep, newest first. Everything below was built during Mo
 - The Privacy notice says what a passkey shares: only its public key, never your fingerprint or face.
 
 ### Changed
-- **No glows.** The coloured glow around buttons, dots, photos, the sign-in window and the Monad logo is gone, along with the background light and the halo behind the landing photos. Colours, layout and wording are unchanged.
+- **No glows.** The coloured glow around buttons, dots, photos, the sign-in window and the Monad logo is gone, along with the background light, the halo behind the landing photos and the grid behind the chooser. The Connect button keeps its look. Colours, layout and wording are unchanged.
 
 ## 2026-10-09: waiting tips keep their rules
 

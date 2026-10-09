@@ -992,11 +992,11 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
 /* Primary action (Connect, Get started, …): mint, lifts and glows a little on hover. */
 .btn-connect {
   background: var(--mint); border-color: var(--mint); color: var(--ink); border-radius: var(--radius-3);
-  box-shadow: none;
+  box-shadow: 0 4px 18px rgba(162, 233, 128, .18);
   transition: background-color var(--motion-fast-2) var(--ease-standard), translate var(--motion-fast-2) var(--ease-standard),
               box-shadow var(--motion-medium-2) var(--ease-standard), transform var(--motion-fast-2) var(--ease-standard);
 }
-.btn-connect:hover:not(:disabled) { background: var(--mint-hover); translate: 0 -1px; box-shadow: none; }
+.btn-connect:hover:not(:disabled) { background: var(--mint-hover); translate: 0 -1px; box-shadow: 0 0 22px var(--mint-glow); }
 .btn-connect:active:not(:disabled) { translate: 0 0; }
 .btn-connect:focus-visible { outline-color: var(--mint); }
 
@@ -1560,3 +1560,6 @@ body:has(.doc) .site-footer { position: relative; }
 
 /* No glows: the drifting background light and the halo behind the landing photos are off. */
 .void-glow, .flower::before { display: none; }
+
+/* No grid behind the chooser ("Where would you like to go?"), on any screen. */
+.chooser-floor { display: none; }
