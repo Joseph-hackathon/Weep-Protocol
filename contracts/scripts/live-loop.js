@@ -17,7 +17,7 @@ import hre from "hardhat";
  */
 const AUSD = "0xcEF38D455529Dbc2e37654452C288C25e18ADea4";
 const PAY = process.env.WEEP_PAY || "0x9F24A86a2d35CC9c281Ee87F6A6204aE782BF5F5";
-const POOLS = process.env.WEEP_POOLS || "0xd2bd0685941DAe339D9E28224a5a912FBEb56317";
+const POOLS = process.env.WEEP_POOLS || "0xea18adEb9bc624d068eb5ec51fAd66a8FB744996";
 const { ethers } = hre;
 const U = (cents) => BigInt(cents) * 10n ** 16n;
 const $ = (u) => "$" + ethers.formatUnits(u, 18);
