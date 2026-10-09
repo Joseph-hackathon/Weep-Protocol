@@ -13,7 +13,14 @@ const config = {
       chainId: 10143,
       accounts: [PRIVATE_KEY]
     }
-  }
+  },
+  // Verified source on MonadVision (Sourcify; no API key needed): npx hardhat verify --network monadTestnet <address> [constructor args]
+  sourcify: {
+    enabled: true,
+    apiUrl: "https://sourcify-api-monad.blockvision.org",
+    browserUrl: "https://testnet.monadvision.com"
+  },
+  etherscan: { enabled: false }
 };
 
 export default config;

@@ -1,26 +1,32 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, Delete } from "lucide-react";
 import { requestConnect, useWallet } from "../wallet-bridge";
 import {
-  AUSD, EXPLORER, FAUCET, SPLITTER, approveData, ausdAllowance, ausdBalance, mintData, monBalance, readPolicy, readTeam, supportsTeam,
-  tipIndividualData, toDollars, toUnits, transferData, waitForReceipt, type Member,
+  AUSD, EXPLORER, FAUCET, approveData, ausdAllowance, ausdBalance, feeDollars, feeOn, feeRate, mintData, monBalance, payoutData,
+  readFee, readPolicy, readTeam, tipIndividualData, tipTeamData, toDollars, toUnits, transfersIn, waitForReceipt, type Fee, type Member,
 } from "../chain";
+import { ensureGas } from "../gas";
+import { resolvePool } from "../pool-link";
 
 /**
  * Customer space as one payment card, on live Monad testnet data.
  *   Amount first: typed straight in (keypad on phones, keyboard on desktop), digits pop as they land.
- *   Route second: one bar shows exactly where the money goes — the live rule read from TipSplitter
- *   (the merchant sets it in plain words; AI turns it into these percentages; it can change anytime).
+ *   Route second: one bar shows exactly where the money goes — the live rule read from the business's own pool
+ *   (the code or link says which pool; the business sets the rule in plain words; it can change anytime).
  *   One action: the button carries the whole journey (sign in → confirm → sending → done).
- * Payment is real: test AUSD into the TipSplitter pool, confirmed on-chain, with its explorer receipt.
+ * Payment is real: test AUSD into the pool (or straight to one person), confirmed on-chain, with its receipt.
+ * Weep's fee (fixed in the pool) is shown before signing and paid on top: the person or team gets 100%.
+ * Anyone can pay the pool out to the team; the page shows who gets what first.
  * The page never loads the wallet stack itself (wallet bridge) and reads the chain with plain JSON-RPC.
  */
 type Policy = { foh: number; boh: number; bar: number };
-type Phase = "idle" | "minting" | "approve" | "confirm" | "sending" | "done";
+type Phase = "idle" | "gas" | "minting" | "approve" | "confirm" | "sending" | "done";
+type Payout = { state: "idle" | "busy" | "done"; hash?: string; error?: string };
 const GROUPS = [
   { key: "foh", label: "Floor", photo: "/hero/barista.jpg" }, // front of house
   { key: "boh", label: "Kitchen", photo: "/hero/chefs.jpg" },
@@ -58,13 +64,18 @@ export default function TipFlow() {
   const reduce = useReducedMotion();
   const wallet = useWallet();
   const address = wallet.address;
+  const [poolAt, setPoolAt] = useState<string | null>(null); // the business's pool, from the code or link
+  const [badLink, setBadLink] = useState(false);
+  const [noPool, setNoPool] = useState(false); // opened without a table code, and none used here before
+  const [fee, setFee] = useState<Fee | null>(null); // Weep's fee on this pool, read from Monad
+  const [payout, setPayout] = useState<Payout>({ state: "idle" });
   const [policy, setPolicy] = useState<Policy | null>(null);
   const [pool, setPool] = useState<number | null>(null);
   const [funds, setFunds] = useState<{ ausd: bigint; mon: bigint; of: string } | null>(null);
   const [entry, setEntry] = useState("2");
   const [phase, setPhase] = useState<Phase>("idle");
   const [message, setMessage] = useState<string | null>(null);
-  const [tx, setTx] = useState<{ hash: string; dollars: number; target: string } | null>(null);
+  const [tx, setTx] = useState<{ hash: string; dollars: number; target: string; feePaid: bigint | null } | null>(null);
   const [details, setDetails] = useState(false);
   const [typing, setTyping] = useState(false); // "Custom": type the amount in a field (any device)
   const [intent, setIntent] = useState(false); // pressed Send before signing in: continue once signed in
@@ -79,28 +90,44 @@ export default function TipFlow() {
   const valid = dollars >= 0.01;
   const signingIn = intent && !address;
   const preparing = intent && Boolean(address); // signed in, about to carry on by itself
-  const busy = phase === "minting" || phase === "approve" || phase === "confirm" || phase === "sending" || signingIn || preparing;
+  const busy = phase === "gas" || phase === "minting" || phase === "approve" || phase === "confirm" || phase === "sending" || signingIn || preparing;
   const myFunds = funds && funds.of === address ? funds : null;
   const balance = myFunds ? toDollars(myFunds.ausd) : null;
   // Decided before the press, so the button always offers the right next step.
-  const lowMon = Boolean(address && myFunds && myFunds.mon === BigInt(0));
-  const lowAusd = Boolean(address && myFunds && !lowMon && myFunds.ausd < toUnits(dollars));
+  // Email sign-ins have their first fee covered by Weep, so only other wallets are sent to the faucet.
+  const lowMon = Boolean(address && myFunds && myFunds.mon === BigInt(0) && !wallet.token);
+  const tipUnits = toUnits(dollars);
+  const feeUnits = fee ? feeOn(tipUnits, fee) : null; // exactly what the pool will charge on top
+  const lowAusd = Boolean(address && myFunds && !lowMon && myFunds.ausd < tipUnits + (feeUnits ?? BigInt(0)));
+
+  // Which business: the pool in the code or link (checked on Monad), else the last one used here.
+  useEffect(() => {
+    let live = true;
+    resolvePool().then((p) => {
+      if (!live) return;
+      if (p === "bad") setBadLink(true);
+      else if (p === "none") setNoPool(true);
+      else setPoolAt(p);
+    }).catch(() => live && setBadLink(true));
+    return () => { live = false; };
+  }, []);
 
   // Live rule and pool, refreshed while the page is visible.
   useEffect(() => {
+    if (!poolAt) return;
     let live = true;
-    let hasTeam = false;
     const read = () => {
       if (document.hidden) return;
-      readPolicy().then((p) => live && setPolicy(p)).catch(() => {});
-      ausdBalance(SPLITTER).then((b) => live && setPool(toDollars(b))).catch(() => {});
-      if (hasTeam) readTeam().then((t) => live && setTeam(t)).catch(() => {});
+      readPolicy(poolAt).then((p) => live && setPolicy(p)).catch(() => {});
+      ausdBalance(poolAt).then((b) => live && setPool(toDollars(b))).catch(() => {});
+      readTeam(poolAt).then((t) => live && setTeam(t)).catch(() => {});
     };
-    supportsTeam().then((ok) => { hasTeam = ok; if (ok) readTeam().then((t) => live && setTeam(t)).catch(() => {}); }).catch(() => {});
+    readFee(poolAt).then((f) => live && setFee(f)).catch(() => {});
     read();
     const id = setInterval(read, 15000);
-    return () => { live = false; clearInterval(id); };
-  }, []);
+    document.addEventListener("visibilitychange", read); // opened in the background (a scanned code): read as soon as it's seen
+    return () => { live = false; clearInterval(id); document.removeEventListener("visibilitychange", read); };
+  }, [poolAt]);
 
   const refreshFunds = useCallback(async (who: string) => {
     const [a, m] = await Promise.all([ausdBalance(who), monBalance(who)]);
@@ -148,37 +175,44 @@ export default function TipFlow() {
   /** The whole payment, once signed in: top up test dollars if short, then send, then wait for Monad. */
   const go = async () => {
     setMessage(null);
-    if (!address || !wallet.send) return;
+    if (!address || !wallet.send || !poolAt) return;
+    if (!fee || feeUnits === null) { setMessage("Still reading the pool's fee. Try again in a moment."); return; }
     if (!wallet.onMonad) { setMessage("Your wallet is on another network. Switch to Monad at the top, then send."); return; }
     try {
       let f = myFunds ?? (await refreshFunds(address));
-      if (f.mon === BigInt(0)) return;  // the button now offers the faucet
-      if (f.ausd < toUnits(dollars)) {
+      if (f.mon === BigInt(0)) {
+        setPhase("gas");
+        if (!(await ensureGas(wallet))) { setPhase("idle"); window.open(FAUCET, "_blank", "noopener"); setMessage("This needs a little MON for the network fee. Get some free from the faucet, then send."); return; }
+        f = await refreshFunds(address);
+      }
+      const units = tipUnits;
+      const need = units + feeUnits; // the tip, plus Weep's fee on top
+      if (f.ausd < need) {
         setPhase("minting");
         const minted = await wallet.send({ to: AUSD, data: mintData(address, toUnits(TEST_DOLLARS)) });
         if (!(await waitForReceipt(minted))) throw new Error("Couldn't add test dollars. Nothing was sent.");
         f = await refreshFunds(address);
       }
-      const units = toUnits(dollars);
-      let hash: string;
-      if (person) {
-        // A direct tip: the pool may move exactly this amount from the customer straight to the person.
-        if ((await ausdAllowance(address, SPLITTER)) < units) {
-          setPhase("approve");
-          const ok = await wallet.send({ to: AUSD, data: approveData(SPLITTER, units) });
-          if (!(await waitForReceipt(ok))) throw new Error("Couldn't approve the tip. Nothing was sent.");
-        }
-        setPhase("confirm");
-        hash = await wallet.send({ to: SPLITTER, data: tipIndividualData(person.name, units) });
-      } else {
-        setPhase("confirm");
-        hash = await wallet.send({ to: AUSD, data: transferData(SPLITTER, units) });
+      // The pool may move exactly the tip plus the fee, and nothing more.
+      if ((await ausdAllowance(address, poolAt)) < need) {
+        setPhase("approve");
+        const ok = await wallet.send({ to: AUSD, data: approveData(poolAt, need) });
+        if (!(await waitForReceipt(ok))) throw new Error("Couldn't approve the tip. Nothing was sent.");
       }
+      setPhase("confirm");
+      // A named tip carries the wallet the guest saw for that name: if the team changed since, nothing moves.
+      const hash = await wallet.send({
+        to: poolAt as `0x${string}`,
+        data: person ? tipIndividualData(person.name, person.wallet, units, feeUnits) : tipTeamData(units, feeUnits),
+      });
       setPhase("sending");
-      if (!(await waitForReceipt(hash))) throw new Error("The network turned the payment down. Nothing was sent.");
-      setTx({ hash, dollars, target });
+      if (!(await waitForReceipt(hash))) throw new Error("The network turned the tip down (the team or the fee may have changed). Nothing was sent.");
+      // The receipt's fee is what Monad recorded, not what the page expected.
+      const moved = await transfersIn(hash, address).catch(() => []);
+      const feePaid = moved.length ? moved.filter((m) => m.to.toLowerCase() === fee.recipient).reduce((n, m) => n + m.units, BigInt(0)) : null;
+      setTx({ hash, dollars, target, feePaid });
       setPhase("done");
-      ausdBalance(SPLITTER).then((b) => setPool(toDollars(b))).catch(() => {});
+      ausdBalance(poolAt).then((b) => setPool(toDollars(b))).catch(() => {});
       refreshFunds(address).catch(() => {});
     } catch (e) {
       setPhase("idle");
@@ -211,11 +245,45 @@ export default function TipFlow() {
   }, [intent]);
 
   const done = () => { setPhase("idle"); setTx(null); setEntry("2"); setTyping(false); setIntent(false); setMessage(null); };
+
+  /** Anyone can pay the pool out: it only ever goes to the saved team, by the saved split. */
+  const payOut = async () => {
+    if (!address || !wallet.send) { requestConnect(); return; }
+    if (!poolAt) return;
+    setPayout({ state: "busy" });
+    try {
+      if (!(await ensureGas(wallet))) { window.open(FAUCET, "_blank", "noopener"); throw new Error("Paying out needs a little MON for the network fee. Get some free from the faucet, then try again."); }
+      const hash = await wallet.send({ to: poolAt as `0x${string}`, data: payoutData });
+      if (!(await waitForReceipt(hash))) throw new Error("Monad turned the payout down. Nothing moved.");
+      setPayout({ state: "done", hash });
+      ausdBalance(poolAt).then((b) => setPool(toDollars(b))).catch(() => {});
+    } catch (e) {
+      setPayout({ state: "idle", error: rejected(e) ? "Cancelled. Nothing moved." : (e as Error)?.message || "Something went wrong. Nothing moved." });
+    }
+  };
+  /** What each person would get if the pool were paid out now: their group's share, split evenly in the group. */
+  const payoutPreview = () => {
+    if (!split || !pool) return [];
+    const counts = [0, 1, 2].map((g) => team.filter((m) => m.group === g).length);
+    const keys = ["foh", "boh", "bar"] as const;
+    return team.map((m) => ({ name: m.name, dollars: Math.floor(((pool * split[keys[m.group]]) / 100 / counts[m.group]) * 100) / 100 }));
+  };
+  // What each group really gets, as the pool pays it: a group with nobody on the team hands its share to the
+  // groups that have people (the same rule as payoutTeam on Monad). Without a saved team, the rule as set.
+  const split: Policy | null = (() => {
+    if (!policy || team.length === 0) return policy;
+    const staffed = { foh: team.some((m) => m.group === 0), boh: team.some((m) => m.group === 1), bar: team.some((m) => m.group === 2) };
+    const active = GROUPS.reduce((n, g) => n + (staffed[g.key] ? policy[g.key] : 0), 0);
+    if (!active) return policy;
+    return { foh: staffed.foh ? (policy.foh * 100) / active : 0, boh: staffed.boh ? (policy.boh * 100) / active : 0, bar: staffed.bar ? (policy.bar * 100) / active : 0 };
+  })();
+  const pct = (n: number) => `${Math.round(n * 10) / 10}%`;
+
   /** Each group's share in whole cents, largest remainder first, so the parts always add up to the tip exactly. */
   const share = (key: (typeof GROUPS)[number]["key"], total: number) => {
-    if (!policy) return 0;
+    if (!split) return 0;
     const cents = Math.round(total * 100);
-    const parts = GROUPS.map((g) => ({ k: g.key, exact: (cents * policy[g.key]) / 100 }));
+    const parts = GROUPS.map((g) => ({ k: g.key, exact: (cents * split[g.key]) / 100 }));
     const base = parts.map((x) => ({ ...x, c: Math.floor(x.exact) }));
     let left = cents - base.reduce((n, x) => n + x.c, 0);
     [...base].sort((x, y) => (y.exact - y.c) - (x.exact - x.c)).forEach((x) => { if (left > 0) { x.c += 1; left -= 1; } });
@@ -224,6 +292,9 @@ export default function TipFlow() {
 
   const amount = usd(dollars, true);
   const label =
+    badLink ? "This code isn't a Weep tip pool" :
+    !fee && poolAt ? "Reading the pool" :
+    phase === "gas" ? "Covering the network fee" :
     phase === "minting" ? "Adding test dollars" :
     phase === "approve" ? "Allow the tip in your wallet" :
     phase === "confirm" ? "Confirm in your wallet" :
@@ -237,6 +308,20 @@ export default function TipFlow() {
     person ? `Send ${amount} to ${person.name}` :
     `Send tip · ${amount}`;
   const size = entry.length > 6 ? "s" : entry.length > 4 ? "m" : "l";
+
+  // Opened without a table code: tipping needs to know which team, so ask for the code.
+  if (noPool) {
+    return (
+      <div className="pay">
+        <div className="pay-card pay-done">
+          <h1 className="pay-done-amount">Scan the table code</h1>
+          <p className="pay-done-sub">Every venue on Weep has its own tip code. Scan or paste it to tip the team or anyone by name.</p>
+          <Link href="/tip" className="pay-again m-link">Scan or paste a code</Link>
+          <Link href="/merchant" className="m-text-btn">Run a venue? Set up your team</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pay">
@@ -280,7 +365,25 @@ export default function TipFlow() {
                 <motion.div id="pay-details" className="pay-details" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: reduce ? 0 : 0.24, ease: EASE }}>
                   <div className="pay-details-inner">
                     <p>The venue writes this rule in plain words. It&apos;s saved on Monad and applies to every tip until they change it.</p>
-                    <a href={`${EXPLORER}/address/${SPLITTER}`} target="_blank" rel="noreferrer">View the pool <ArrowUpRight size={14} aria-hidden /></a>
+                    {team.length > 0 && (payout.state === "done" || (pool !== null && pool > 0)) && (
+                      <div className="pay-payout">
+                        {payout.state !== "done" && <>
+                          <p className="pay-payout-head">Anyone can pay the {usd(pool ?? 0, true)} in the pool out now. It only goes to the team, by this split:</p>
+                          <ul>
+                            {payoutPreview().map((x) => <li key={x.name}><span>{x.name}</span><span>{usd(x.dollars, true)}</span></li>)}
+                          </ul>
+                        </>}
+                        {payout.state === "done" ? (
+                          <a href={`${EXPLORER}/tx/${payout.hash}`} target="_blank" rel="noreferrer">Paid out. Receipt <ArrowUpRight size={14} aria-hidden /></a>
+                        ) : (
+                          <button type="button" className="pay-details-btn pay-payout-btn" onClick={payOut} disabled={payout.state === "busy" || busy}>
+                            {payout.state === "busy" ? "Paying out…" : !address ? "Sign in to pay out the team" : "Pay out the team"}
+                          </button>
+                        )}
+                        {payout.error && <p className="pay-payout-error" role="alert">{payout.error}</p>}
+                      </div>
+                    )}
+                    <a href={`${EXPLORER}/address/${poolAt ?? ""}`} target="_blank" rel="noreferrer">View the pool <ArrowUpRight size={14} aria-hidden /></a>
                   </div>
                 </motion.div>
               )}
@@ -318,6 +421,12 @@ export default function TipFlow() {
                 </>
               )}
             </p>
+            {/* Weep's fee, before anything is signed: paid on top, so the tip arrives in full */}
+            {fee && feeUnits !== null && valid && (
+              <p className="pay-fee">
+                + {feeDollars(feeUnits)} Weep fee ({feeRate(fee)}) · {person ? person.name : "the team"} gets 100%
+              </p>
+            )}
 
             <div className="pay-quick" role="group" aria-label="Amount">
               {QUICK.map((q) => (
@@ -331,18 +440,18 @@ export default function TipFlow() {
               <section className="pay-route" aria-label="Where your tip goes">
                 <div className="pay-route-head">
                   <span>Split</span>
-                  <span className="pay-route-rule">{policy ? `${policy.foh}% · ${policy.boh}% · ${policy.bar}%` : "…"}</span>
+                  <span className="pay-route-rule">{split ? `${pct(split.foh)} · ${pct(split.boh)} · ${pct(split.bar)}` : "…"}</span>
                 </div>
                 <div className="pay-bar" aria-hidden>
                   {GROUPS.map((g, i) => (
                     <motion.span key={g.key} className={`pay-seg pay-seg-${i}`} initial={false}
-                      animate={{ flexGrow: policy ? policy[g.key] : 1 }} transition={{ duration: reduce ? 0 : 0.6, ease: EASE }} />
+                      animate={{ flexGrow: split ? split[g.key] || 0.0001 : 1 }} transition={{ duration: reduce ? 0 : 0.6, ease: EASE }} />
                   ))}
                 </div>
                 <ul className="pay-legend">
                   {GROUPS.map((g, i) => (
                     <li key={g.key}>
-                      <span className="pay-legend-label"><span className={`pay-dot pay-seg-${i}`} aria-hidden />{g.label}{policy && <span className="pay-legend-pct">({policy[g.key]}%)</span>}</span>
+                      <span className="pay-legend-label"><span className={`pay-dot pay-seg-${i}`} aria-hidden />{g.label}{split && <span className="pay-legend-pct">({pct(split[g.key])})</span>}</span>
                       <Roll value={policy && valid ? usd(share(g.key, dollars), true) : "—"} className="pay-legend-amount" />
                     </li>
                   ))}
@@ -360,10 +469,10 @@ export default function TipFlow() {
             </div>
 
             {/* One action that carries the whole journey */}
-            <button type="button" className={`pay-send${busy ? " is-busy" : ""}`} onClick={primary} disabled={!valid || busy} aria-busy={busy || undefined}>
+            <button type="button" className={`pay-send${busy ? " is-busy" : ""}`} onClick={primary} disabled={!valid || busy || badLink || !poolAt} aria-busy={busy || undefined}>
               <span className="pay-send-progress" aria-hidden />
               <motion.span className="pay-send-fill" aria-hidden initial={false}
-                animate={{ scaleX: phase === "sending" ? 0.92 : phase === "confirm" ? 0.5 : phase === "approve" || phase === "minting" ? 0.3 : preparing ? 0.22 : signingIn ? 0.1 : 0 }}
+                animate={{ scaleX: phase === "sending" ? 0.92 : phase === "confirm" ? 0.5 : phase === "approve" || phase === "minting" ? 0.3 : phase === "gas" ? 0.26 : preparing ? 0.22 : signingIn ? 0.1 : 0 }}
                 transition={{ duration: reduce ? 0 : phase === "sending" ? 2.6 : 0.4, ease: phase === "sending" ? [0.1, 0.6, 0.3, 1] : EASE }} />
               <span className="pay-send-label">
                 <AnimatePresence mode="popLayout" initial={false}>
@@ -389,7 +498,7 @@ export default function TipFlow() {
 
             {tx!.target === "pool" ? (
               <ul className="pay-done-split">
-                {GROUPS.map((g, i) => (
+                {GROUPS.filter((g) => !split || split[g.key] > 0).map((g, i) => (
                   <motion.li key={g.key} initial={{ opacity: 0, y: reduce ? 0 : 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduce ? 0 : 0.35, delay: reduce ? 0 : 0.55 + i * 0.08, ease: EASE }}>
                     <span className="pay-done-photo"><Image src={g.photo} alt="" fill sizes="48px" /></span>
                     <span className="pay-done-share">+{usd(share(g.key, tx!.dollars), true)}</span>
@@ -408,7 +517,7 @@ export default function TipFlow() {
             )}
 
             <dl className="pay-receipt">
-              <div><dt>Platform fee</dt><dd>$0</dd></div>
+              <div><dt>Weep fee, paid on top</dt><dd>{tx!.feePaid === null ? "See receipt" : feeDollars(tx!.feePaid)}</dd></div>
               <div><dt>Confirmed</dt><dd><a href={`${EXPLORER}/tx/${tx!.hash}`} target="_blank" rel="noreferrer">{tx!.hash.slice(0, 6)}…{tx!.hash.slice(-4)} <ArrowUpRight size={14} aria-hidden /></a></dd></div>
             </dl>
             <button type="button" className="btn-connect pay-again" onClick={done}>Done</button>

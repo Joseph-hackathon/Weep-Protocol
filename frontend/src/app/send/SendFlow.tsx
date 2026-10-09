@@ -6,7 +6,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowUp, ArrowUpRight, Check, ChevronLeft, Plus, X } from "lucide-react";
 import { requestConnect, useWallet } from "../wallet-bridge";
-import { AUSD, EXPLORER, FAUCET, approveData, ausdAllowance, ausdBalance, mintData, monBalance, transfersIn, waitForReceipt, type Moved } from "../chain";
+import { AUSD, EXPLORER, FAUCET, approveData, ausdAllowance, ausdBalance, feeDollars, feeOn, feeRate, mintData, readFee, transfersIn, waitForReceipt, type Fee, type Moved } from "../chain";
+import { ensureGas } from "../gas";
 import { MAX_RECIPIENTS, PAY, payData } from "../pay";
 import { plan, sharesOf, type Mode, type Row } from "../allocate";
 import { sendMessage } from "../send-message";
@@ -22,7 +23,7 @@ import { sendMessage } from "../send-message";
  * People can be reached by email (they open it by signing in with that email) or by wallet address.
  */
 type Stage = "say" | "check" | "done";
-type Phase = "idle" | "signin" | "lookup" | "minting" | "approve" | "confirm" | "sending" | "pending";
+type Phase = "idle" | "signin" | "gas" | "lookup" | "minting" | "approve" | "confirm" | "sending" | "pending";
 type Person = Row & { key: number };
 
 const EASE = [0.2, 0.8, 0.2, 1] as const;
@@ -72,6 +73,9 @@ export default function SendFlow() {
   const [resolved, setResolved] = useState<Record<string, string>>({}); // email → wallet
   const [receipt, setReceipt] = useState<{ hash: string; totalCents: number; lines: { name: string; wallet: string; cents: number }[]; moved: Moved[] } | null>(null);
   const [pendingHash, setPendingHash] = useState<string | null>(null);
+  // Weep's fee on payments, read from WeepPay: shown before signing, paid on top, so everyone gets 100%
+  const [fee, setFee] = useState<Fee | null>(null);
+  useEffect(() => { readFee(PAY).then(setFee).catch(() => {}); }, []);
   const [editing, setEditing] = useState<number | null>(null); // the contact being typed in shows in full
   const totalRef = useRef<HTMLInputElement>(null);
 
@@ -101,6 +105,8 @@ export default function SendFlow() {
   // A real problem (amounts over the total, percentages over 100%, money left unassigned) gets the amber line.
   const unfinished = !rows.length || unnamed >= 0 || unreachable >= 0 || Boolean(p.issue?.startsWith("Enter how much")) || p.issue === "Add someone to pay.";
   const busy = phase !== "idle" && phase !== "pending";
+  /** A transfer to Weep's fee recipient, as recorded in the transaction (not a payment to a person). */
+  const isFee = (m: Moved) => Boolean(fee && m.to.toLowerCase() === fee.recipient);
 
   const edit = (key: number, patch: Partial<Row>) => setPeople((list) => list.map((x) => (x.key === key ? { ...x, ...patch } : x)));
   const add = () => setPeople((list) => [...list, person()]);
@@ -148,16 +154,19 @@ export default function SendFlow() {
     if (!address || !wallet.send || !wallet.sign) { setPhase("signin"); requestConnect(); return; }
     if (!wallet.onMonad) { setMessage("Your wallet is on another network. Switch to Monad at the top, then send."); return; }
     try {
-      if ((await monBalance(address)) === BigInt(0)) { setPhase("idle"); window.open(FAUCET, "_blank", "noopener"); setMessage("Sending needs a little MON for the network fee. Get some free from the faucet, then send."); return; }
+      setPhase("gas");
+      if (!(await ensureGas(wallet))) { setPhase("idle"); window.open(FAUCET, "_blank", "noopener"); setMessage("Sending needs a little MON for the network fee. Get some free from the faucet, then send."); return; }
       const emails = [...new Set(rows.filter((r) => isEmail(r.contact)).map((r) => r.contact.toLowerCase()))];
       const map = emails.length ? await walletsFor(emails) : resolved;
       const lines = rows.map((r, i) => ({ name: r.name, wallet: isEmail(r.contact) ? map[r.contact.toLowerCase()] : r.contact, cents: p.cents[i] }));
       const amounts = lines.map((l) => BigInt(l.cents) * CENT);
-      const need = BigInt(p.totalCents) * CENT;
+      if (!fee) throw new Error("Still reading Weep's fee. Try again in a moment. Nothing was sent.");
+      const feeUnits = feeOn(BigInt(p.totalCents) * CENT, fee);
+      const need = BigInt(p.totalCents) * CENT + feeUnits; // everyone's amounts, plus Weep's fee on top
 
       if ((await ausdBalance(address)) < need) {
         setPhase("minting");
-        const top = BigInt(Math.max(100, Math.ceil(p.totalCents / 100))) * ONE;
+        const top = BigInt(Math.max(100, Math.ceil(p.totalCents / 100) + 1)) * ONE;
         const minted = await wallet.send({ to: AUSD, data: mintData(address, top) });
         if (!(await waitForReceipt(minted))) throw new Error("Couldn't add test dollars. Nothing was sent.");
       }
@@ -167,11 +176,11 @@ export default function SendFlow() {
         if (!(await waitForReceipt(ok))) throw new Error("Couldn't allow the payment. Nothing was sent.");
       }
       setPhase("confirm");
-      const hash = await wallet.send({ to: PAY, data: payData(lines.map((l) => l.wallet), amounts) });
+      const hash = await wallet.send({ to: PAY, data: payData(lines.map((l) => l.wallet), amounts, feeUnits) });
       setPhase("sending");
       let ok: boolean;
       try { ok = await waitForReceipt(hash); } catch { setPendingHash(hash); setPhase("pending"); return; }
-      if (!ok) throw new Error("The network turned the payment down. Nothing was sent.");
+      if (!ok) throw new Error("The network turned the payment down (the fee may have changed). Nothing was sent.");
       const moved = await transfersIn(hash, address).catch(() => [] as Moved[]);
       setReceipt({ hash, totalCents: p.totalCents, lines, moved });
       setPhase("idle");
@@ -216,6 +225,7 @@ export default function SendFlow() {
   const fade = { initial: { opacity: 0, y: reduce ? 0 : 12 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: reduce ? 0 : -8 }, transition: { duration: reduce ? 0 : 0.26, ease: EASE } };
   const label =
     phase === "signin" ? "Signing in" :
+    phase === "gas" ? "Covering the network fee" :
     phase === "lookup" ? "Sign to reach their emails" :
     phase === "minting" ? "Adding test dollars" :
     phase === "approve" ? "Allow the payment in your wallet" :
@@ -332,14 +342,15 @@ export default function SendFlow() {
             <div className={`i-sum${issue ? " is-off" : ""}`} role="status">
               {issue
                 ? <span>{issue}</span>
-                : <span><Check size={14} strokeWidth={3} aria-hidden /> Adds up: {money(p.totalCents)} to {count(rows.length)}, no fee, all in one payment.{p.extraCents.length ? ` ${p.extraCents.length === 1 ? "One person gets" : `${p.extraCents.length} people get`} 1¢ more so it's exact.` : ""}</span>}
+                : <span><Check size={14} strokeWidth={3} aria-hidden /> Adds up: {money(p.totalCents)} to {count(rows.length)}, all in one payment.{p.extraCents.length ? ` ${p.extraCents.length === 1 ? "One person gets" : `${p.extraCents.length} people get`} 1¢ more so it's exact.` : ""}
+                    {fee && <> Plus {feeDollars(feeOn(BigInt(p.totalCents) * CENT, fee))} Weep fee ({feeRate(fee)}) on top: they get 100%.</>}</span>}
             </div>
             )}
 
             <button type="button" className={`pay-send${busy ? " is-busy" : ""}`} onClick={phase === "pending" ? checkPending : send} disabled={(!ready && phase !== "pending") || busy} aria-busy={busy || undefined}>
               <span className="pay-send-progress" aria-hidden />
               <motion.span className="pay-send-fill" aria-hidden initial={false}
-                animate={{ scaleX: phase === "sending" ? 0.92 : phase === "confirm" ? 0.6 : phase === "approve" || phase === "minting" ? 0.4 : phase === "lookup" ? 0.25 : phase === "signin" ? 0.1 : 0 }}
+                animate={{ scaleX: phase === "sending" ? 0.92 : phase === "confirm" ? 0.6 : phase === "approve" || phase === "minting" ? 0.4 : phase === "lookup" ? 0.25 : phase === "gas" ? 0.15 : phase === "signin" ? 0.1 : 0 }}
                 transition={{ duration: reduce ? 0 : phase === "sending" ? 2.6 : 0.4, ease: phase === "sending" ? [0.1, 0.6, 0.3, 1] : EASE }} />
               <span className="pay-send-label">
                 <AnimatePresence mode="popLayout" initial={false}>
@@ -365,7 +376,7 @@ export default function SendFlow() {
             <h1 className="pay-done-amount">{money(receipt.totalCents)} sent</h1>
             <p className="pay-done-sub">Confirmed on Monad. This is what each person received:</p>
             <ul className="i-proof" aria-label="Confirmed transfers">
-              {receipt.moved.map((m, i) => {
+              {receipt.moved.filter((m) => !isFee(m)).map((m, i) => {
                 const who = receipt.lines.find((l) => l.wallet?.toLowerCase() === m.to.toLowerCase());
                 return (
                   <motion.li key={`${m.to}-${i}`} initial={{ opacity: 0, y: reduce ? 0 : 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduce ? 0 : 0.3, delay: reduce ? 0 : 0.45 + Math.min(i, 10) * 0.05, ease: EASE }}>
@@ -378,8 +389,8 @@ export default function SendFlow() {
               })}
             </ul>
             <dl className="pay-receipt">
-              <div><dt>Delivered</dt><dd>{cash(receipt.moved.reduce((a, m) => a + m.units, BigInt(0)))} of {money(receipt.totalCents)}</dd></div>
-              <div><dt>Platform fee</dt><dd>$0</dd></div>
+              <div><dt>Delivered</dt><dd>{cash(receipt.moved.filter((m) => !isFee(m)).reduce((a, m) => a + m.units, BigInt(0)))} of {money(receipt.totalCents)}</dd></div>
+              <div><dt>Weep fee, paid on top</dt><dd>{receipt.moved.length ? feeDollars(receipt.moved.filter(isFee).reduce((a, m) => a + m.units, BigInt(0))) : "See receipt"}</dd></div>
               <div><dt>Receipt</dt><dd><a href={`${EXPLORER}/tx/${receipt.hash}`} target="_blank" rel="noreferrer">{receipt.hash.slice(0, 6)}…{receipt.hash.slice(-4)} <ArrowUpRight size={14} aria-hidden /></a></dd></div>
             </dl>
             {rows.some((r) => isEmail(r.contact)) && <p className="m-quiet">People paid by email open it in My money by signing in with that email.</p>}

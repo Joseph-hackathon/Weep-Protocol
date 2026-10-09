@@ -2,9 +2,56 @@
 
 User-visible changes to Weep, newest first. Everything below was built during Monad Metropolis (1 September – 13 October 2026).
 
-## 2026-10-08
+## Unreleased: business model, safer pools and final cleanup
+
+These need new contracts. They go live once the steps in [HANDOFF.md](HANDOFF.md) are done.
 
 ### Added
+- **Weep's fee.** 0.3% on personal payments (WeepPay) and 0.5% on business tips (TipPool), paid on top by the payer, so recipients and staff receive 100%. Each rate and recipient is fixed at deployment (at most 1%). Every payment or tip must carry the fee the payer reviewed. The fee is shown before signing, and receipts read it back from Monad.
+- **`tipTeam`.** Team tips now go through the pool contract, so the fee is enforced.
+- **Payouts by anyone.** Anyone can pay a pool out, from the table code's *Split details*, after seeing who gets what. It only ever pays the saved team.
+- **Safer named tips.** A named tip carries the wallet the guest saw, and is refused if the name was repointed since.
+- **Re-entrancy guards** on every function that moves tokens, tested with a hostile token. Teams are capped at 100.
+- **`deploy-all.js`** (both contracts, fees from code, recipient from `FEE_RECIPIENT`) and **`retire-shared-pool.js`**.
+- **30 contract tests**, covering 100% of lines and 90.9% of branches.
+
+### Changed
+- `/customer` without a table code asks for one, instead of opening the first shared pool.
+- A production build stops if the contract addresses aren't set, so a half-configured deploy never goes live.
+
+### Removed
+- The `agent` role. Nothing in the app ever set one.
+- The first shared pool (TipSplitter) and its test, the old deploy scripts, and two unused workflow experiments.
+- Generated coding-assistant files from the frontend folder.
+
+## 2026-10-09
+
+### Added
+- **Every business gets its own tip pool.** The Merchant Portal creates the business's pool on Monad, with its team and split, in one confirmation (WeepPools at `0x5b9f33a6db109314f4720dd28a5bed9C1Ef53210`, verified). Table codes and links open that business's pool, checked on Monad first. Anyone can now try the whole business flow.
+- **First network fee covered for email sign-ins,** so a first payment, team setup or payout needs nothing but an email. Connected wallets still use the faucet.
+- **Nine new contract tests** (28 in total) for pools: one per business, owner-only changes and payouts, no second setup, exact payouts.
+- **AI tools note** in the README, as the hackathon rules ask.
+
+### Fixed
+- The team-tip preview and receipt now follow the pool's real rule: a group with nobody in it no longer shows a share.
+- On laptop screens, the footer no longer overlaps the Merchant Portal and Employee Dashboard cards.
+
+### Removed
+- Early experiment routes that returned made-up data, their database files and unused images.
+
+## 2026-10-08
+
+### Added (evening)
+- **Contract source verified on MonadVision** (Sourcify) for WeepPay, TipSplitter and AUSD (test).
+- **Five new contract tests** (19 in total): no double payouts, nothing lost to rounding, unknown recipients refused, insufficient funds and spent allowances move nothing.
+- **App tests for the amount rules** (`npm test` in `frontend`), including 5,000 random payment plans.
+- **Document pages** (Terms, Privacy, How money moves) laid out as one reading column, linked quietly from the landing page.
+
+### Changed
+- When the AI service is busy, each model now gets one retry before the next takes over, so bursts of requests are less likely to show an error.
+- Pages that were opened in a background tab, like a scanned tip code, now read Monad as soon as they're seen, without waiting for the next refresh.
+
+### Added (morning)
 - **Individual side.** The role chooser has an **Individual · Business** switch. Individual is the default, and the choice is remembered. It has three screens:
   - **Send**: describe a payment in words, check the exact amounts, and pay everyone in one transaction, by email or wallet.
   - **My money**: your balance, payments in with sender and time, and your own pay-me link and QR code.

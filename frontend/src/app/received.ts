@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SPLITTER, ausdBalance, receivedRecently, toDollars } from "./chain";
+import { ausdBalance, isKnownPool, isWeepPool, receivedRecently, toDollars } from "./chain";
 
 /**
  * What a wallet holds and what reached it: shared by My money (individuals) and the Employee Dashboard
- * (a business's staff), so both read the same Monad data the same way.
+ * (a business's staff), so both read the same Monad data the same way. Payments from a business's tip pool
+ * read "team tips".
  *   balance — live, in dollars
  *   list    — every payment in: amount, sender, the time Monad recorded, and its transaction;
  *             read from the chain while the page is open and remembered on this device
@@ -23,6 +24,7 @@ export function useReceived(address: string | null | undefined) {
   const [balance, setBalance] = useState<{ of: string; dollars: number } | null>(null);
   const [history, setHistory] = useState<{ of: string; list: Received[] } | null>(null);
   const [fresh, setFresh] = useState<string | null>(null);
+  const [, setPoolsChecked] = useState(0); // re-label once senders are known to be team pools
   const seen = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -31,6 +33,8 @@ export function useReceived(address: string | null | undefined) {
     const start = remembered(address);
     seen.current = new Set(start.map((r) => r.hash + r.from));
     const t0 = setTimeout(() => live && setHistory({ of: address, list: start }), 0);
+    Promise.all([...new Set(start.map((r) => r.from))].map((f) => isWeepPool(f).catch(() => false)))
+      .then((found) => { if (live && found.some(Boolean)) setPoolsChecked((n) => n + 1); });
     let first = true;
     const read = async () => {
       if (document.hidden) return;
@@ -43,6 +47,9 @@ export function useReceived(address: string | null | undefined) {
           .map((m) => ({ hash: m.hash, from: m.from, cents: Number(m.units / BigInt(10) ** BigInt(16)), at: m.at }));
         if (added.length) {
           added.forEach((r) => seen.current.add(r.hash + r.from));
+          // Which senders are a business's tip pool, so those payments read "team tips"
+          Promise.all([...new Set(added.map((r) => r.from))].map((f) => isWeepPool(f).catch(() => false)))
+            .then((found) => { if (live && found.some(Boolean)) setPoolsChecked((n) => n + 1); });
           setHistory((h) => {
             const list = [...added, ...(h && h.of === address ? h.list : [])].slice(0, 60);
             try { localStorage.setItem(keyOf(address), JSON.stringify(list)); } catch {}
@@ -59,7 +66,8 @@ export function useReceived(address: string | null | undefined) {
     };
     read();
     const id = setInterval(read, POLL_MS);
-    return () => { live = false; clearTimeout(t0); clearInterval(id); };
+    document.addEventListener("visibilitychange", read); // back on the tab: catch up at once
+    return () => { live = false; clearTimeout(t0); clearInterval(id); document.removeEventListener("visibilitychange", read); };
   }, [address]);
 
   const dollars = balance && balance.of === address ? balance.dollars : null;
@@ -71,6 +79,5 @@ export function useReceived(address: string | null | undefined) {
 /** The name someone shows on their own pay-me link, kept on this device (shared by both sides). */
 export const NAME_KEY = "weep.name";
 
-/** Who a payment came from, in words: the business's tip pool, or the sender's wallet. */
-export const fromLabel = (from: string) =>
-  from.toLowerCase() === SPLITTER.toLowerCase() ? "team tips" : `${from.slice(0, 6)}…${from.slice(-4)}`;
+/** Who a payment came from, in words: a business's tip pool, or the sender's wallet. */
+export const fromLabel = (from: string) => (isKnownPool(from) ? "team tips" : `${from.slice(0, 6)}…${from.slice(-4)}`);

@@ -824,6 +824,14 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
 .pay-input { min-width: 1ch; max-width: 6ch; padding: 0; border: 0; outline: 0; background: transparent; color: inherit; font: inherit; letter-spacing: inherit; caret-color: var(--pay-lime); }
 .pay-input::placeholder { color: #3f3a4f; }
 .pay-balance { display: flex; justify-content: center; align-items: center; gap: var(--space-2); min-height: 24px; margin-top: calc(-1 * var(--space-2)); font-size: 12px; line-height: 16px; color: #a1a1aa; font-variant-numeric: tabular-nums; }
+/* Weep's fee, shown before signing: one quiet line under the balance */
+.pay-fee { margin-top: calc(-1 * var(--space-3)); text-align: center; font-size: 12px; line-height: 16px; color: #a1a1aa; font-variant-numeric: tabular-nums; }
+/* Anyone can pay the pool out: who gets what, then one button */
+.pay-payout { display: flex; flex-direction: column; gap: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--pay-well-line); }
+.pay-payout ul { display: flex; flex-direction: column; gap: 2px; }
+.pay-payout li { display: flex; justify-content: space-between; font-size: 12px; line-height: 18px; color: #d4d4d8; font-variant-numeric: tabular-nums; }
+.pay-payout-btn { align-self: flex-start; }
+.pay-payout-error { color: #f97066 !important; }
 .pay-max { height: 24px; padding: 0 var(--space-2); border-radius: var(--radius-1); cursor: pointer; font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--pay-lime); background: transparent; border: 1px solid rgba(162, 233, 128, .45); }
 .pay-max:hover { background: rgba(162, 233, 128, .1); }
 
@@ -1402,14 +1410,15 @@ a.e-feed-amount:hover { text-decoration: underline; text-underline-offset: 3px; 
 .i-total-field.is-empty > span { color: #4a4458; }
 .i-page .pay-send:disabled:not(.is-busy) { opacity: 1; color: #8b8598; background: var(--pay-raised); box-shadow: inset 0 0 0 1px var(--pay-line); }
 
-/* Individual pages: the footer follows the content in the page's own flow, so a long card never runs under it. */
+/* Card pages (Send, My money, Tip, Merchant Portal, Employee Dashboard): the footer follows the content in the
+   page's own flow, so a long card never runs under it. */
 @media (min-width: 600px) {
-  body:has(.i-page) .site-main { flex: 1; display: flex; flex-direction: column; min-height: calc(100dvh - var(--header) - env(safe-area-inset-top, 0px) - var(--footer-h) - var(--bottom-pad)); }
-  body:has(.i-page) .site-footer { position: relative; }
+  body:has(.m-page) .site-main { flex: 1; display: flex; flex-direction: column; min-height: calc(100dvh - var(--header) - env(safe-area-inset-top, 0px) - var(--footer-h) - var(--bottom-pad)); }
+  body:has(.m-page) .site-footer { position: relative; }
 }
-@media (pointer: fine), (min-width: 1100px) { body:has(.i-page) .site-main { padding-bottom: var(--space-4); } }
+@media (pointer: fine), (min-width: 1100px) { body:has(.m-page) .site-main { padding-bottom: var(--space-4); } }
 /* Short laptop screens: a little less air around the card, so card and footer both fit. */
-@media (min-width: 600px) and (max-height: 700px) { .i-page { padding-block: var(--space-3); } }
+@media (min-width: 600px) and (max-height: 700px) { .m-page { padding-block: var(--space-3); } }
 @media (max-height: 620px) { .t-finder { max-height: 36vh; } }
 @media (min-width: 600px) and (max-height: 620px) { .i-page .e-photo { aspect-ratio: 2 / 1; } }
 /* Tip page on laptops and desktops: the footer follows the card instead of floating over it, so a card taller

@@ -1,1 +1,0 @@
-const { createContract } = require('./src/lib/canton.ts'); createContract('Customer', 'TipPool', {merchant:'Merchant', customer:'Customer', agent:'Agent', amount:'10', timestamp: new Date().toISOString()}).then(console.log).catch(console.error);
