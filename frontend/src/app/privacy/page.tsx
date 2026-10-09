@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { X_URL } from "../SiteFooter";
 import DocPage, { Part, CONTACT, REPO } from "../DocPage";
 
 export const metadata: Metadata = {
@@ -135,7 +136,7 @@ export default function Page() {
       </Part>
 
       <Part id="contact" title="Contact and complaints">
-        <p>For privacy questions or requests, <a href={CONTACT} target="_blank" rel="noreferrer">open an issue in the Weep repository</a>. Don&apos;t include personal details in the issue; we&apos;ll arrange a private way to talk. You can also complain to your local data protection authority, such as the Office of the Data Protection Commissioner in Kenya or the supervisory authority in your EU country.</p>
+        <p>For privacy questions or requests, <a href={CONTACT} target="_blank" rel="noreferrer">open an issue in the Weep repository</a> or send a direct message to <a href={X_URL} target="_blank" rel="noreferrer">@WeepProtocol on X</a>. Don&apos;t include personal details in a public issue; we&apos;ll arrange a private way to talk. You can also complain to your local data protection authority, such as the Office of the Data Protection Commissioner in Kenya or the supervisory authority in your EU country.</p>
       </Part>
     </DocPage>
   );

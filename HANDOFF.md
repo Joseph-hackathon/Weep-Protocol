@@ -1,5 +1,7 @@
 # Handoff: business model, safer pools and final cleanup
 
+Weep on X: [@WeepProtocol](https://x.com/WeepProtocol). It's linked from every page footer, the README and the share card.
+
 ## What you do, in order
 
 **1. Submit the current version in the Monad portal today, and screenshot the confirmation.**

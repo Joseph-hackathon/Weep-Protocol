@@ -6,7 +6,8 @@
   <p>
     <a href="https://weep-protocol.vercel.app">Try it live</a> ·
     <a href="#verify-it-in-two-minutes">Verify it in two minutes</a> ·
-    <a href="https://weep-protocol.vercel.app/how-money-moves">How money moves</a>
+    <a href="https://weep-protocol.vercel.app/how-money-moves">How money moves</a> ·
+    <a href="https://x.com/WeepProtocol">@WeepProtocol on X</a>
   </p>
   <p><sub>Testnet preview · Monad testnet (chain ID 10143) · Test dollars with no real-world value · Contracts not audited</sub></p>
 </div>
@@ -232,6 +233,8 @@ These are plans, not features:
 ## Team
 
 Built for [Monad Metropolis](https://monad.xyz/metropolis), Consumer Products & Payments track, by [Joseph-hackathon](https://github.com/Joseph-hackathon) and [mauyaa](https://github.com/mauyaa).
+
+**Contact:** news and questions on X at [@WeepProtocol](https://x.com/WeepProtocol). Bugs and security reports go through [GitHub issues](https://github.com/Joseph-hackathon/Weep-Protocol/issues), as described in [SECURITY.md](SECURITY.md).
 
 ## AI tools
 

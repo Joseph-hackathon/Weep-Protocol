@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { X_URL } from "../SiteFooter";
 import DocPage, { Part, CONTACT, REPO } from "../DocPage";
 
 export const metadata: Metadata = {
@@ -147,7 +148,7 @@ export default function Page() {
       </Part>
 
       <Part id="contact" title="Contact">
-        <p>Questions about these terms: <a href={CONTACT} target="_blank" rel="noreferrer">open an issue in the Weep repository</a>. Please don&apos;t post personal details there.</p>
+        <p>Questions about these terms: <a href={CONTACT} target="_blank" rel="noreferrer">open an issue in the Weep repository</a>, or message <a href={X_URL} target="_blank" rel="noreferrer">@WeepProtocol on X</a>. Please don&apos;t post personal details in public.</p>
       </Part>
     </DocPage>
   );
