@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useConnectWallet, usePrivy, useWallets } from "@privy-io/react-auth";
+import { useConnectWallet, useCreateWallet, usePrivy, useWallets } from "@privy-io/react-auth";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check, Loader2, TriangleAlert } from "lucide-react";
 import { createPublicClient, formatEther, http, stringToHex } from "viem";
@@ -90,6 +90,22 @@ export default function ConnectButton({ openOnMount = false }: { openOnMount?: b
   const onRightNetwork = direct ? direct.chainId === monadTestnet.id : !privyWallet?.chainId || privyWallet.chainId === MONAD;
   const via = direct?.wallet.name ?? user?.email?.address ?? undefined;
   const settingUp = authenticated && !address; // signed in; Privy is creating the wallet
+  const { createWallet } = useCreateWallet();
+  const [setupStuck, setSetupStuck] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
+  // Privy makes an email user's wallet right after sign-in. If it hasn't appeared after 5 s, ask for it directly;
+  // after 20 s, stop spinning and say so, with a way to try again, so nobody waits on an endless spinner.
+  useEffect(() => {
+    if (!settingUp) return;
+    const nudge = setTimeout(() => { createWallet().catch(() => {}); }, 5000);
+    const stuck = setTimeout(() => setSetupStuck(true), 20000);
+    return () => { clearTimeout(nudge); clearTimeout(stuck); setSetupStuck(false); setSetupError(null); };
+  }, [settingUp, createWallet]);
+  const retrySetup = async () => {
+    setSetupError(null);
+    try { await createWallet(); }
+    catch { setSetupError("Your wallet couldn't be set up in this browser. Sign out and in again, or try a normal (not private) window."); }
+  };
   const balance = useBalance(address);
   const dollars = useDollars(address);
 
@@ -206,14 +222,14 @@ export default function ConnectButton({ openOnMount = false }: { openOnMount?: b
         <button
           type="button"
           className="btn-connect"
-          onClick={openModal}
-          aria-busy={settingUp || undefined}
-          disabled={settingUp}
+          onClick={setupStuck ? () => { disconnect(); openModal(); } : openModal}
+          aria-busy={(settingUp && !setupStuck) || undefined}
+          disabled={settingUp && !setupStuck}
           aria-haspopup="dialog"
         >
           <span className="btn-label">Connect</span>
-          {settingUp && <span className="btn-spinner" aria-hidden />}
-          {settingUp && <span className="sr-only">Setting up your wallet</span>}
+          {settingUp && !setupStuck && <span className="btn-spinner" aria-hidden />}
+          {settingUp && !setupStuck && <span className="sr-only">Setting up your wallet</span>}
         </button>
       ) : (
         <AccountMenu
@@ -255,6 +271,23 @@ export default function ConnectButton({ openOnMount = false }: { openOnMount?: b
                 </button>
               </span>
               {switchError && <span className="notice-error" role="alert">{switchError}</span>}
+            </motion.div>
+          )}
+          {settingUp && setupStuck && (
+            <motion.div
+              key="setup"
+              className="notice"
+              role="status"
+              initial={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0, transition: { duration: 0.24, ease: [0, 0, 0.38, 0.9] } }}
+              exit={{ opacity: 0, transition: { duration: 0.15, ease: [0.2, 0, 1, 0.9] } }}
+            >
+              <span className="notice-row">
+                <TriangleAlert size={16} strokeWidth={2} aria-hidden className="notice-icon" />
+                <span className="notice-text">You&apos;re signed in, but your wallet isn&apos;t ready yet.</span>
+                <button type="button" className="notice-btn" onClick={retrySetup}>Try again</button>
+              </span>
+              {setupError && <span className="notice-error" role="alert">{setupError}</span>}
             </motion.div>
           )}
           {toast && onRightNetwork && (
