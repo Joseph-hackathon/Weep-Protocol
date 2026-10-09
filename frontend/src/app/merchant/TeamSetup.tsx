@@ -7,7 +7,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { encodeFunctionData, parseAbi } from "viem";
 import { ArrowUp, ArrowUpRight, Check, ChevronLeft, Minus, Plus, X } from "lucide-react";
 import { requestConnect, useWallet } from "../wallet-bridge";
-import { EXPLORER, FAUCET, WEEP_POOLS, ausdBalance, poolOf, predictPool, readPolicy, readTeam, toDollars, waitForReceipt } from "../chain";
+import { EXPLORER, FAUCET, POLICY_REGISTRY, WEEP_POOLS, ausdBalance, descriptionHash, poolOf, predictPool, readAttestation, readPolicy, readTeam, toDollars, waitForReceipt, type Attestation } from "../chain";
 import { setupMessage } from "../setup-message";
 import { ensureGas } from "../gas";
 import { poolLink } from "../pool-link";
@@ -81,6 +81,7 @@ export default function TeamSetup() {
   const [fromChain, setFromChain] = useState(false); // opened with a team already saved on Monad
   const [waiting, setWaiting] = useState<number | null>(null); // dollars in the pool, ready to pay out
   const [payout, setPayout] = useState<{ state: "idle" | "confirm" | "sending" | "done"; hash?: string; dollars?: number; error?: string }>({ state: "idle" });
+  const [attested, setAttested] = useState<Attestation | null>(null); // Chainlink CRE's signed read of this exact description
 
   // Signed in: find this business's own pool. If it has one with a team, show it instead of an empty form.
   useEffect(() => {
@@ -112,7 +113,23 @@ export default function TeamSetup() {
     return () => { live = false; clearInterval(id); document.removeEventListener("visibilitychange", read); };
   }, [stage, poolAt]);
 
+  // Reviewing: has Weep's Chainlink CRE workflow attested this exact description for this business's pool?
+  useEffect(() => {
+    setAttested(null);
+    if (stage !== "review" || !address || !POLICY_REGISTRY) return;
+    let live = true;
+    (async () => {
+      const a = await readAttestation(poolAt ?? (await predictPool(address)));
+      if (live && a && a.descriptionHash === descriptionHash(text)) setAttested(a);
+    })().catch(() => {});
+    return () => { live = false; };
+  }, [stage, address, poolAt, text]);
+
   const total = pool.foh + pool.boh + pool.bar;
+  // Shown only while the review still matches what CRE attested; any edit makes it the business's own version.
+  const matchesCre = !!attested && attested.foh === pool.foh && attested.boh === pool.boh && attested.bar === pool.bar
+    && attested.names.length === people.length
+    && people.every((p, i) => p.name.trim() === attested.names[i] && GROUP_INDEX[p.group] === attested.groups[i]);
   const emailsOk = people.every((p) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email) && p.name.trim());
   // Customers tip a person by name, so two people can't share one.
   const namesOk = new Set(people.map((p) => p.name.trim().toLowerCase())).size === people.length;
@@ -311,6 +328,11 @@ export default function TeamSetup() {
               <span className="pay-send-label"><span>{reviewOk ? "Save team" : people.length === 0 ? "Add someone first" : total !== 100 ? "Make the split 100%" : !emailsOk ? "Everyone needs an email" : "Give everyone a different name"}</span></span>
             </button>
             <p className="m-quiet">Tips to a named person go 100% to them.</p>
+            {matchesCre && (
+              <a className="m-cre" href={`${EXPLORER}/address/${POLICY_REGISTRY}`} target="_blank" rel="noreferrer">
+                Read by Chainlink CRE · attested on Monad <ArrowUpRight size={12} aria-hidden />
+              </a>
+            )}
           </motion.div>
         )}
 

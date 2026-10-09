@@ -113,6 +113,8 @@ flowchart LR
 - **Receipts come from the chain.** The receipt is built from the transaction's own `Transfer` logs, fee included, not from what the app intended.
 - **Every business gets its own pool.** `WeepPools.create` makes a minimal clone of `TipPool` with the team and split in one transaction, owned by the business's wallet. The address is known in advance, so its team's wallets can be approved first. A named tip carries the wallet the guest saw, and is refused if the name was repointed since. ([WeepPools.sol](contracts/contracts/WeepPools.sol), [TipPool.sol](contracts/contracts/TipPool.sol))
 
+- **Team setup can be read by Chainlink CRE.** The [weep-policy workflow](cre) reads a team description with Gemini through Chainlink's network and checks it by the pool's rules. It then records the first names, groups and split on Monad as a DON-signed report, never emails or wallets. When the review matches that record, the Merchant Portal says *Read by Chainlink CRE · attested on Monad*. The record has no power over any pool. ([WeepPolicyRegistry.sol](contracts/contracts/WeepPolicyRegistry.sol), [cre/README.md](cre/README.md))
+
 The full design, every flow, the trust boundaries and failure handling are in [docs/architecture.md](docs/architecture.md).
 
 ## Why Monad
@@ -128,6 +130,7 @@ The full design, every flow, the trust boundaries and failure handling are in [d
 | WeepPay | One payment to up to 100 people, exact and all-or-nothing; 0.3% fee on top, fixed. No owner. | Monad testnet (10143) | [`0x9F24A86a2d35CC9c281Ee87F6A6204aE782BF5F5`](https://testnet.monadexplorer.com/address/0x9F24A86a2d35CC9c281Ee87F6A6204aE782BF5F5) | [MonadVision](https://testnet.monadvision.com/address/0x9F24A86a2d35CC9c281Ee87F6A6204aE782BF5F5) · [WeepPay.sol](contracts/contracts/WeepPay.sol) |
 | WeepPools | Gives every business its own tip pool, in one transaction; 0.5% fee on tips, fixed. No owner. | Monad testnet (10143) | [`0xd2bd0685941DAe339D9E28224a5a912FBEb56317`](https://testnet.monadexplorer.com/address/0xd2bd0685941DAe339D9E28224a5a912FBEb56317) | [MonadVision](https://testnet.monadvision.com/address/0xd2bd0685941DAe339D9E28224a5a912FBEb56317) · [WeepPools.sol](contracts/contracts/WeepPools.sol) |
 | TipPool | Each business's pool: team, split, named and team tips, payouts anyone can trigger. Cloned per business; owned by that business. | Monad testnet (10143) | template [`0x510065532A1CA0DF6316e52f33DC34e6780305Ec`](https://testnet.monadexplorer.com/address/0x510065532A1CA0DF6316e52f33DC34e6780305Ec) | [MonadVision](https://testnet.monadvision.com/address/0x510065532A1CA0DF6316e52f33DC34e6780305Ec) · [TipPool.sol](contracts/contracts/TipPool.sol) |
+| WeepPolicyRegistry | Records the team and split Weep's Chainlink CRE workflow read from a description, as DON-signed reports. Only the Chainlink Forwarder can write; no money, no power over pools. | Monad testnet (10143) | [`0x6437a6BD79d388E70f726Fee9f15f3d0245ddc9c`](https://testnet.monadexplorer.com/address/0x6437a6BD79d388E70f726Fee9f15f3d0245ddc9c) | [MonadVision](https://testnet.monadvision.com/address/0x6437a6BD79d388E70f726Fee9f15f3d0245ddc9c) · [WeepPolicyRegistry.sol](contracts/contracts/WeepPolicyRegistry.sol) |
 | AUSD (test) | The 18-decimal test dollar Weep pays in. Anyone can mint. | Monad testnet (10143) | [`0xcEF38D455529Dbc2e37654452C288C25e18ADea4`](https://testnet.monadexplorer.com/address/0xcEF38D455529Dbc2e37654452C288C25e18ADea4) | [MonadVision](https://testnet.monadvision.com/address/0xcEF38D455529Dbc2e37654452C288C25e18ADea4) · [MockAUSD.sol](contracts/contracts/MockAUSD.sol) |
 
 ## Run it locally
@@ -184,6 +187,7 @@ Each line says where it was checked: on a local test chain, on Monad testnet, or
 | Shares always add up to the total, to the cent | 7 tests, including 5,000 random payment plans (`frontend/src/app/allocate.test.mts`) | Local |
 | The same email always gives the same wallet; a forged lookup is refused (401) | Two lookups of two new emails, plus one forged signature | Live site, 8 Oct 2026 |
 | The AI reads messy descriptions: paragraphs, "2k", "fifty bucks", fractions, percentages, emails only, wallets, 20 unnamed winners | 14 different descriptions: 14 of 14 read correctly one at a time, and all 14 answered when sent at once. It asked instead of guessing when the total was missing or didn't add up | Live site, 9 Oct 2026 |
+| Chainlink CRE reads a team description and attests it on Monad: Gemini through the CRE HTTP capability, checked by the pool's rules, written as a DON-signed report through Chainlink's forwarder. The record is Sam, Ama (floor) and Kai (kitchen), split 70/30/0, with no emails | [Attestation transaction](https://testnet.monadexplorer.com/tx/0x3803dec912c6d9d4af4776f252f40cb0d712e87bde554e29f3c3f3adf9f77ac3), from `cre workflow simulate --broadcast` ([cre/README.md](cre/README.md)) | CRE CLI simulation, real transaction on Monad testnet, 9 Oct 2026 |
 | Earlier version (before fees): $100 paid exactly to three people, with the contract keeping $0 | [Transaction](https://testnet.monadexplorer.com/tx/0x8be685ec1e20eee98010745c8bbcaf0fa10d1e08967bd1f811f1c9e5594e44e9) on the previous WeepPay | Monad testnet, 8 Oct 2026 |
 
 ## Security and trust
@@ -194,6 +198,7 @@ Each line says where it was checked: on a local test chain, on Monad testnet, or
 - **No re-entry.** Every function that moves tokens is guarded against re-entrancy, and tested with a hostile token.
 - **Server routes need signatures.** An email lookup needs a fresh signature (under 10 minutes old) from the sender, naming the exact emails. Creating a team's wallets needs the signature of the pool's owner, or of the wallet whose pool will be created at that address.
 - **Fee cover is narrow.** Weep covers a network fee only for the signed-in person's own email wallet (checked with their Privy session), only while it's low on MON and new, and never below the sponsor wallet's reserve.
+- **CRE records can't touch money.** WeepPolicyRegistry accepts reports only from the Chainlink Forwarder set at deployment, refuses anything a pool would refuse, and has no power over any pool.
 - **Not audited.** The contracts are tested but haven't been independently audited, and this is a testnet preview.
 
 Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
@@ -225,12 +230,13 @@ These are plans, not features:
 | [Terms of use](https://weep-protocol.vercel.app/terms) · [Privacy notice](https://weep-protocol.vercel.app/privacy) | Anyone using the service |
 | [docs/architecture.md](docs/architecture.md) | Builders and reviewers: system, flows, trust boundaries, decisions |
 | [docs/api.md](docs/api.md) | Developers: the server routes, with examples |
+| [cre/README.md](cre/README.md) | Developers: the Chainlink CRE workflow, and how to run it |
 | [CHANGELOG.md](CHANGELOG.md) | What was built during the hackathon, by date |
 | [SECURITY.md](SECURITY.md) | Reporting a vulnerability |
 
 ## Built with
 
-[Monad](https://monad.xyz) for settlement · [Privy](https://privy.io) for email sign-in, embedded wallets and email-to-wallet lookups ([providers.tsx](frontend/src/app/providers.tsx), [send/wallets](frontend/src/app/api/send/wallets/route.ts)) · [Gemini](https://ai.google.dev) for reading descriptions ([send/parse](frontend/src/app/api/send/parse/route.ts)) · AUSD (test), a stand-in for Agora's AUSD dollar · Next.js, viem, Hardhat and OpenZeppelin.
+[Monad](https://monad.xyz) for settlement · [Privy](https://privy.io) for email sign-in, embedded wallets and email-to-wallet lookups ([providers.tsx](frontend/src/app/providers.tsx), [send/wallets](frontend/src/app/api/send/wallets/route.ts)) · [Gemini](https://ai.google.dev) for reading descriptions ([send/parse](frontend/src/app/api/send/parse/route.ts)) · [Chainlink CRE](https://docs.chain.link/cre) for reading a team description through Chainlink's network and attesting it on Monad ([cre/](cre)) · AUSD (test), a stand-in for Agora's AUSD dollar · Next.js, viem, Hardhat and OpenZeppelin.
 
 ## Team
 

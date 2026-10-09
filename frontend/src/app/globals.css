@@ -1129,6 +1129,8 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
 .m-send:focus-visible { outline: 2px solid var(--pay-lime); outline-offset: 2px; }
 .m-send .m-spin { border-color: rgba(10, 10, 10, .2); border-top-color: var(--pay-ink); }
 .m-quiet { font-size: 12px; line-height: 16px; color: #8b8598; text-align: center; }
+.m-cre { display: inline-flex; align-items: center; justify-content: center; gap: 4px; align-self: center; min-height: 44px; margin-top: calc(-1 * var(--space-3)); font-size: 12px; line-height: 16px; color: #8b8598; text-decoration: none; }
+.m-cre:hover { color: var(--pay-pale); }
 .m-error { font-size: 13px; line-height: 18px; color: #fca5a5; text-align: center; }
 .m-warn { font-size: 13px; line-height: 18px; color: #fcd34d; text-align: center; }
 .m-note { font-size: 13px; line-height: 19px; color: var(--pay-pale); }

@@ -11,7 +11,7 @@ import DocSpy from "./DocSpy";
  * The canonical text lives in these pages; the README links here.
  */
 export const DOC_UPDATED = "9 October 2026";
-export const DOC_VERSION = "1.2";
+export const DOC_VERSION = "1.3";
 export const REPO = "https://github.com/Joseph-hackathon/Weep-Protocol";
 /** Where people reach the team. One place, so it can be changed once. */
 export const CONTACT = `${REPO}/issues`;

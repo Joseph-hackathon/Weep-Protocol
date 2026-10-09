@@ -54,13 +54,15 @@ export default function Page() {
         <p>Monad is a public blockchain. Everything recorded on it can be seen by anyone, through the <a href="https://testnet.monadexplorer.com" target="_blank" rel="noreferrer">Monad testnet explorer</a>, and can&apos;t be changed or deleted, by us or anyone else. That includes:</p>
         <ul>
           <li>every payment: the wallets involved, the amount, Weep&apos;s fee and the time;</li>
-          <li>for business pools: which wallet created each pool, the first names, wallets and groups of the team, and each payout.</li>
+          <li>for business pools: which wallet created each pool, the first names, wallets and groups of the team, and each payout;</li>
+          <li>for a team description read by Chainlink CRE: the first names and groups it found, the split, and a one-way fingerprint of the description.</li>
         </ul>
         <p>Weep never writes emails to Monad. Each Send payment carries a reference code, which is a one-way fingerprint of its recipients and amounts and contains no names or emails.</p>
       </Part>
 
       <Part id="ai" title="Descriptions read by AI">
         <p>Text you type into Send&apos;s description box, or into the Merchant Portal&apos;s team setup, is sent from our server to Google&apos;s Gemini API, which turns it into a draft list. Weep doesn&apos;t save that text. Google handles it under the <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noreferrer">Gemini API terms</a>, which, depending on the plan in use, may allow Google to keep it for a limited time and to use it to improve its products. Write only what the payment needs. To skip the AI completely, choose <em>Or add people yourself</em>.</p>
+        <p>A business can also have its team description read through Weep&apos;s Chainlink CRE workflow. The description goes to Chainlink&apos;s network and to Gemini. The first names, groups and split it finds are then recorded on Monad, where they&apos;re public. Emails and wallets are never part of that record.</p>
       </Part>
 
       <Part id="paid" title="If someone paid your email">
@@ -92,6 +94,7 @@ export default function Page() {
         <ul>
           <li><strong>Privy</strong>: sign-in by email code, wallets for email users, and the email-to-wallet lookup. <a href="https://www.privy.io/privacy-policy" target="_blank" rel="noreferrer">Privy privacy policy</a>.</li>
           <li><strong>Google</strong>: reads payment and team descriptions through the Gemini API. <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Google privacy policy</a>.</li>
+          <li><strong>Chainlink</strong>: runs Weep&apos;s CRE workflow, which reads a team description when a business uses it. <a href="https://chain.link/privacy-policy" target="_blank" rel="noreferrer">Chainlink privacy policy</a>.</li>
           <li><strong>Vercel</strong>: hosts the website and our server code. <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noreferrer">Vercel privacy policy</a>.</li>
           <li><strong>The Monad network endpoint</strong>: your browser reads balances and payments from Monad&apos;s public endpoint, which sees those requests.</li>
           <li><strong>WalletConnect</strong>: only if you connect a wallet through the wallet directory, to relay the connection.</li>

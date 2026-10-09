@@ -100,6 +100,7 @@ export default function Page() {
 
       <Part id="ai" title="What the AI does, and doesn&apos;t">
         <p>Weep uses Google&apos;s Gemini models to read a description and draft the list of people. It uses the same approach to read a team description in the Merchant Portal.</p>
+        <p>A team description can also be read through Chainlink&apos;s network. Weep&apos;s <a href="https://github.com/Joseph-hackathon/Weep-Protocol/tree/main/cre" target="_blank" rel="noreferrer">Chainlink CRE workflow</a> asks Gemini, checks the answer by the tip pool&apos;s rules, and records the team&apos;s first names, groups and split on Monad, signed by the Chainlink network. When the review in the Merchant Portal matches that record exactly, the review card says <em>Read by Chainlink CRE</em>. The record has no power over any pool. The business still saves its team itself.</p>
         <ul>
           <li><strong>It reads.</strong> It finds people, emails, wallets, the total, and whether each share is a fixed amount, a percentage or an equal share.</li>
           <li><strong>It doesn&apos;t calculate.</strong> Weep&apos;s own code works out every cent, as described above.</li>

@@ -2,6 +2,16 @@
 
 User-visible changes to Weep, newest first. Everything below was built during Monad Metropolis (1 September – 13 October 2026).
 
+## 2026-10-09: Chainlink CRE
+
+WeepPolicyRegistry `0x6437a6BD79d388E70f726Fee9f15f3d0245ddc9c` on Monad testnet, verified on MonadVision. First attestation: [transaction](https://testnet.monadexplorer.com/tx/0x3803dec912c6d9d4af4776f252f40cb0d712e87bde554e29f3c3f3adf9f77ac3).
+
+### Added
+- **Team setup read by Chainlink CRE.** A CRE workflow ([`cre/weep-policy`](cre)) reads a team description with Gemini, checks it by the pool's rules, and records the first names, groups and split on Monad as a DON-signed report. Emails and wallets are never part of it.
+- **WeepPolicyRegistry.** A Chainlink CRE receiver on Monad that only the Forwarder can write to. It holds no money and has no power over any pool. Six tests cover it.
+- **In the Merchant Portal**, the review card says *Read by Chainlink CRE · attested on Monad* when the business's review matches the attested record exactly.
+- The Privacy notice and How money moves explain what the workflow records publicly.
+
 ## 2026-10-09: live with fees, safer pools and the X account
 
 New contracts on Monad testnet, deployed and verified on MonadVision:
