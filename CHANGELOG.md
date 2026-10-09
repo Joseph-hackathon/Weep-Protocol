@@ -8,6 +8,9 @@ User-visible changes to Weep, newest first. Everything below was built during Mo
 - **Sign in with a passkey.** Weep's sign-in window has *Continue with a passkey*. *Create a passkey* makes a new account with the device's fingerprint, face or screen lock, and Privy creates its wallet. *Use my passkey* signs back in. No password, no code. New passkey accounts get their first network fee covered, like email ones.
 - The Privacy notice says what a passkey shares: only its public key, never your fingerprint or face.
 
+### Changed
+- **A calmer look.** No glows, pulsing dots or drifting background light. Mint marks only the main action on a screen and money that has arrived. Selected chips, the keypad, links, spinners and the scanner frame are neutral. Focus outlines are one violet everywhere. Text uses three levels instead of six greys. Floor, kitchen and bar use three calm, labelled colours. Layout, flows and wording are unchanged.
+
 ## 2026-10-09: waiting tips keep their rules
 
 New WeepPools `0xea18adEb9bc624d068eb5ec51fAd66a8FB744996` and TipPool template `0x6823F868EB22510EE5d89bFF14D1BACea4256a06` on Monad testnet. WeepPay is unchanged. Pools made by the earlier WeepPools no longer open in the app.
