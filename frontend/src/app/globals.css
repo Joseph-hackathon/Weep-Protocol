@@ -311,6 +311,7 @@
    on desktop (2 Oct 2026). Below 600px it is a full-width bottom sheet, so phones are unaffected. */
 .cm-panel {
   position: relative; width: 100%; max-width: 360px; max-height: calc(100dvh - 32px); overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: rgba(243, 240, 255, .18) transparent; /* quiet, when it scrolls on a sideways phone */
   padding: var(--space-4) var(--space-6) var(--space-6);
   border-radius: var(--radius-3);
   background: var(--surface-overlay); border: 1px solid var(--border-default);
