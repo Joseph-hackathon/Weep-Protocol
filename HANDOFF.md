@@ -27,7 +27,6 @@ Optional:
   2. Put that business's pool address (`WeepPools.poolOf` for that wallet, or `predict` if it has no pool yet) and the exact description you'll type into `cre/weep-policy/payload.example.json`.
   3. Run the simulate command in [cre/README.md](cre/README.md) again.
 - **First pool's $8.** Joseph can return the $8 of test dollars left in the very first pool (`0x1A24…F336`): with his own key in his `contracts\.env`, he runs `$env:RETURN_TO="0x…"; npx.cmd hardhat run scripts/retire-first-pool.js --network monadTestnet`. Nothing in the app uses that pool.
-- **Covered fee, live.** Sign in on the live Send page with a brand-new email and send something small. Then check that the sponsor wallet `0x8DF6B06B2262AF394DB65eCdA8105841eD3e4927` dropped by about 0.1 MON. It's set up and the route answers, but no real email user has used it yet (see the gaps below).
 
 ## What's live
 
@@ -55,6 +54,7 @@ Optional:
   | Send $100 | [tx](https://testnet.monadexplorer.com/tx/0x6f4558cbc4837385f5d5b198cdf2059d571d223fb382d014ab9159786b71b3c0) | $33.34 / $33.33 / $33.33 delivered, $0.30 fee, WeepPay kept $0 |
 
 - **Chainlink CRE:** `cre workflow simulate --broadcast` on CRE CLI v1.38 read the example description with Gemini in about 2 seconds, then wrote a DON-signed report through Chainlink's forwarder: [transaction](https://testnet.monadexplorer.com/tx/0x3803dec912c6d9d4af4776f252f40cb0d712e87bde554e29f3c3f3adf9f77ac3). We read it back from Monad: Sam and Ama (floor), Kai (kitchen), 70/30/0, no emails. On a local chain, the Merchant Portal showed the CRE line only when the review matched the record, and hid it after any edit (checked at 390 and 320 px).
+- **A brand-new email user, live:** someone who had never used Weep signed in with email only and sent $6.00 to two people by email. Weep's sponsor wallet covered their first network fee (0.1 test MON; its first transaction), the app added test dollars, and [one payment](https://testnet.monadexplorer.com/tx/0x60c358e7ce571c7b689c615b6c87c089d51cdcf8df28f8c09bdbaa6078ff270d) delivered $3.00 and $3.00 with a $0.018 fee, WeepPay keeping $0. Checked on Monad.
 - **Live website, read-only:** the tip page for that pool lists Sam, Ama and Kai and shows "+ $0.025 Weep fee (0.5%) · Sam gets 100%" before signing. Sam's Employee Dashboard shows $11.00.
 - **AI on the live site:** 14 of 14 messy descriptions read correctly one at a time, and 14 of 14 answered when all were sent at once. Before the retry fix, 3 failed when sent at once. Each answer took 4–30 seconds.
 - **Benchmarks:** see [docs/benchmarks.md](docs/benchmarks.md). A payout to 100 people is 3.6M gas (about 2.4% of a block) and costs about 0.37–0.46 test MON. Every transaction confirmed 1.9–2.6 seconds after submitting.
@@ -71,7 +71,7 @@ Scored honestly, with evidence for each line. Each dimension is scored 0–4, an
 | Working end-to-end product | 25 | 3.5 | 21.9 | Live contracts; the full loop with 19 exact checks; the real pages show the pool, the fee and the dashboard | The loop ran by script with test wallets, not by a human signing in with email on the live site |
 | Necessity and proof of Monad use | 15 | 3 | 11.3 | One-transaction payouts to 100 people at 2.4% of a block; about 2 s to confirmation; verified source | A head-to-head comparison with another chain |
 | Security, trust, failure handling | 20 | 3.5 | 17.5 | Fees fixed in code; reviewed fee and wallet checks; re-entrancy guards; no owner on the payment contracts; tested failure paths; failure table in the docs | An independent audit |
-| First-time user experience | 10 | 3.5 | 8.8 | Email sign-in, first fee covered, exact review, fee shown before signing | The covered fee isn't yet exercised by a real email user; AI answers take up to 30 s |
+| First-time user experience | 10 | 3.5 | 8.8 | Email sign-in, first fee covered, exact review, fee shown before signing | AI answers take up to 30 s |
 | Documentation, evidence, demo | 10 | 3.5 | 8.8 | README with a two-minute proof path, evidence table, benchmarks, architecture, API, Terms, Privacy, How money moves | The video (step 2): 4 out of 4 once it's recorded |
 | Adoption and next step | 5 | 2 | 2.5 | Business model; two pilots planned, measured by clear metrics | A real pilot or a letter of intent from a venue |
 | **Total** | 100 | | **≈ 86** | | **≈ 88 once the video is in** |
@@ -80,7 +80,6 @@ Scored honestly, with evidence for each line. Each dimension is scored 0–4, an
 
 - **Not audited.** The contracts are tested (30 tests, 100% of lines) but haven't been independently audited. It's a testnet preview, and the test dollars and fees have no value.
 - **No real pilot yet.** No venue or community has used Weep. The pilots in the README are plans.
-- **Covered fee not exercised.** No real email user has used the first-fee cover on the live site yet. The route is configured (it answers a signed-out request with 401, not 503) and the sponsor is funded.
 - **CRE runs as a simulation.** The workflow runs through Chainlink's official CLI and writes real transactions to Monad testnet, but it isn't deployed to the Chainlink network itself. That needs Chainlink to approve deploy access (`cre account access`). The live site doesn't trigger it yet; it reads the records.
 - **Recent payments list.** The dashboards list only payments from about the last 100 blocks; older ones show in the balance.
 - **AI speed.** The AI can take up to about 30 seconds to read a description.
