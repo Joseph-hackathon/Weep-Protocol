@@ -1527,10 +1527,6 @@ body:has(.doc) .site-footer { position: relative; }
 .cm-legal { margin-top: var(--space-1); font-size: 12px; line-height: 18px; color: var(--text-muted); text-align: center; text-wrap: balance; }
 .cm-legal a { color: var(--text-secondary); text-decoration: underline; text-decoration-color: rgba(243, 240, 255, .25); text-underline-offset: 2px; }
 .cm-legal a:hover { color: var(--text-primary); }
-/* Account menu: the documents, in small print under the actions */
-.panel-legal { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 var(--space-3); margin-top: var(--space-1); padding-top: var(--space-1); border-top: 1px solid var(--border-subtle); }
-.panel-legal a { display: inline-flex; align-items: center; min-height: 32px; font-size: 12px; color: var(--text-muted); text-decoration: none; }
-.panel-legal a:hover, .panel-legal a:focus-visible { color: var(--text-primary); }
 .footer-legal .footer-x { width: var(--control-md); justify-content: center; margin-right: calc(-1 * var(--space-3)); }
 /* Phones: the credit stays centred on its own row; the four links sit in one centred row beneath it */
 @media (max-width: 419px) {
