@@ -39,7 +39,8 @@ export const RESPONSE_SCHEMA = {
 export const geminiRequest = (description: string) => ({
 	systemInstruction: { parts: [{ text: INSTRUCTIONS }] },
 	contents: [{ role: 'user', parts: [{ text: description }] }],
-	generationConfig: { responseMimeType: 'application/json', responseSchema: RESPONSE_SCHEMA, temperature: 0 },
+	// Minimal thinking keeps the answer inside CRE's 10-second limit for an HTTP request (Flash-Lite: 1-2 s in tests).
+	generationConfig: { responseMimeType: 'application/json', responseSchema: RESPONSE_SCHEMA, temperature: 0, thinkingConfig: { thinkingLevel: 'minimal' } },
 })
 
 const EMAIL = /[^\s@]+@[^\s@]+\.[^\s@]+/

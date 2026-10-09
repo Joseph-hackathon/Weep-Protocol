@@ -38,9 +38,10 @@ test('refuses an answer that is not the JSON asked for', () => {
 	assert.throws(() => toPolicy(JSON.stringify({ candidates: [] })), /100%/)
 })
 
-test('asks Gemini for a fixed schema at temperature 0', () => {
+test('asks Gemini for a fixed schema at temperature 0, with minimal thinking to answer within 10 seconds', () => {
 	const r = geminiRequest('Sam on the floor')
 	assert.equal(r.generationConfig.temperature, 0)
 	assert.equal(r.generationConfig.responseMimeType, 'application/json')
+	assert.equal(r.generationConfig.thinkingConfig.thinkingLevel, 'minimal')
 	assert.equal(r.contents[0].parts[0].text, 'Sam on the floor')
 })

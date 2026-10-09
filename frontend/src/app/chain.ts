@@ -177,9 +177,9 @@ export async function receivedRecently(to: string): Promise<(Moved & { at: numbe
 
 /**
  * WeepPolicyRegistry: the team and split Weep's Chainlink CRE workflow read from a business's description, signed by
- * the Chainlink DON and recorded on Monad. A record only; it has no power over any pool. Off until it's deployed.
+ * the Chainlink DON and recorded on Monad. A record only; it has no power over any pool. An empty value turns it off.
  */
-export const POLICY_REGISTRY = (process.env.NEXT_PUBLIC_WEEP_POLICY_REGISTRY || "") as `0x${string}` | "";
+export const POLICY_REGISTRY = (process.env.NEXT_PUBLIC_WEEP_POLICY_REGISTRY ?? "0x6437a6BD79d388E70f726Fee9f15f3d0245ddc9c") as `0x${string}` | "";
 const registryAbi = parseAbi([
   "function policyOf(address pool) view returns ((uint8 foh, uint8 boh, uint8 bar, bytes32 descriptionHash, uint64 attestedAt, string[] names, uint8[] groups))",
 ]);

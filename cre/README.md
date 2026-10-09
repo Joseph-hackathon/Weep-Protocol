@@ -46,10 +46,14 @@ You need a CRE account (free, at [cre.chain.link](https://cre.chain.link)), [Bun
 5. **Simulate, writing to Monad testnet.** From `cre/`:
 
    ```powershell
-   cre workflow simulate weep-policy --target staging-settings --non-interactive --trigger-index 0 --http-payload payload.example.json --broadcast
+   cre workflow simulate weep-policy --target staging-settings --non-interactive --trigger-index 0 --http-payload weep-policy/payload.example.json --broadcast
    ```
 
    The CLI compiles the workflow, calls Gemini, and sends the signed report to Monad through Chainlink's MockKeystoneForwarder. It prints the transaction link.
+
+**Our run, 9 October 2026:** Gemini read the example in about 2 seconds, and [this transaction](https://testnet.monadexplorer.com/tx/0x3803dec912c6d9d4af4776f252f40cb0d712e87bde554e29f3c3f3adf9f77ac3) recorded Sam and Ama (floor) and Kai (kitchen), split 70/30/0, in [WeepPolicyRegistry](https://testnet.monadexplorer.com/address/0x6437a6BD79d388E70f726Fee9f15f3d0245ddc9c). The registry is verified on [MonadVision](https://testnet.monadvision.com/address/0x6437a6BD79d388E70f726Fee9f15f3d0245ddc9c) and trusts the simulation forwarder.
+
+The workflow uses Gemini 3.5 Flash-Lite with minimal thinking. CRE stops any HTTP request after 10 seconds. In our tests Flash-Lite answered in 1–2 seconds, while 3.5 Flash with default thinking took up to 34.
 
 The simulation runs on your computer. The Gemini call is real, and the transaction is a real one on Monad testnet. Deploying the workflow to the Chainlink network itself needs approval from Chainlink (`cre account access`). It also needs a registry that trusts the production KeystoneForwarder, and `authorizedKeys` set on the HTTP trigger.
 

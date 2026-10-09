@@ -2,7 +2,9 @@
 
 User-visible changes to Weep, newest first. Everything below was built during Monad Metropolis (1 September – 13 October 2026).
 
-## Unreleased: Chainlink CRE
+## 2026-10-09: Chainlink CRE
+
+WeepPolicyRegistry `0x6437a6BD79d388E70f726Fee9f15f3d0245ddc9c` on Monad testnet, verified on MonadVision. First attestation: [transaction](https://testnet.monadexplorer.com/tx/0x3803dec912c6d9d4af4776f252f40cb0d712e87bde554e29f3c3f3adf9f77ac3).
 
 ### Added
 - **Team setup read by Chainlink CRE.** A CRE workflow ([`cre/weep-policy`](cre)) reads a team description with Gemini, checks it by the pool's rules, and records the first names, groups and split on Monad as a DON-signed report. Emails and wallets are never part of it.
