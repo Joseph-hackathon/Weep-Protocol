@@ -34,8 +34,8 @@ Optional:
 |---|---|
 | Site | https://weep-protocol.vercel.app (built from `main`) |
 | WeepPay | `0x9F24A86a2d35CC9c281Ee87F6A6204aE782BF5F5`: 0.3% fee on top, verified on MonadVision |
-| WeepPools | `0xd2bd0685941DAe339D9E28224a5a912FBEb56317`: 0.5% fee on tips, verified |
-| TipPool template | `0x510065532A1CA0DF6316e52f33DC34e6780305Ec`: verified, locked |
+| WeepPools | `0xea18adEb9bc624d068eb5ec51fAd66a8FB744996`: 0.5% fee on tips, verified |
+| TipPool template | `0x6823F868EB22510EE5d89bFF14D1BACea4256a06`: verified, locked |
 | Fee recipient | `0xf857184004D6f7c78D89577595baCd6113a4f6E1` |
 | Fee-cover sponsor | `0x8DF6B06B2262AF394DB65eCdA8105841eD3e4927`, funded with 5 test MON. Its key is only in Vercel and in your `contracts\.env` |
 | WeepPolicyRegistry | `0x6437a6BD79d388E70f726Fee9f15f3d0245ddc9c`: Chainlink CRE's records of team setups, verified. Trusts Chainlink's simulation forwarder |

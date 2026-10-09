@@ -186,6 +186,52 @@ describe("WeepPools and TipPool", () => {
     expect(await pool.employeeWallets("Ama")).to.equal(ethers.ZeroAddress);
   });
 
+  it("won't change the team or split while team tips are waiting; they're paid out by the old rules first", async () => {
+    const { ausd, venue, guest, stranger, sam, ama, kai, create, approve } = await setup();
+    const pool = await create(); // Sam and Ama on the floor (60%), Kai in the kitchen (30%), nobody on the bar
+    await approve(pool, usd(90) + feeOf(usd(90)));
+    await pool.connect(guest).tipTeam(usd(90), feeOf(usd(90)));
+    expect(await pool.pendingTips()).to.equal(usd(90));
+
+    // 1 · Changing the split (or the team) while tips are waiting is refused.
+    await expect(pool.connect(venue).configure(100, 0, 0, ["Sam"], [sam.address], [0])).to.be.revertedWith("Pay out pending tips first");
+    expect([...(await pool.currentPolicy())]).to.deep.equal([60n, 30n, 10n]);
+
+    // 2 · Paying out works, by the rules the tips arrived under: floor 60 of 90 active, kitchen 30 of 90.
+    await pool.connect(stranger).payoutTeam();
+    expect(await ausd.balanceOf(sam.address)).to.equal(usd(30));
+    expect(await ausd.balanceOf(ama.address)).to.equal(usd(30));
+    expect(await ausd.balanceOf(kai.address)).to.equal(usd(30));
+    expect(await pool.pendingTips()).to.equal(0);
+
+    // 3 · After the payout, the change goes through.
+    await pool.connect(venue).configure(100, 0, 0, ["Sam"], [sam.address], [0]);
+    expect([...(await pool.currentPolicy())]).to.deep.equal([100n, 0n, 0n]);
+  });
+
+  it("can't be locked by tokens sent straight to the pool, or by tips to one person", async () => {
+    const { ausd, venue, guest, sam, create, approve } = await setup();
+    const pool = await create();
+    await ausd.connect(guest).transfer(await pool.getAddress(), 1n); // an unsolicited 1-unit transfer
+    await approve(pool, usd(5) + feeOf(usd(5)));
+    await pool.connect(guest).tipIndividual("Sam", sam.address, usd(5), feeOf(usd(5))); // straight to Sam
+    expect(await pool.pendingTips()).to.equal(0);
+    await pool.connect(venue).configure(50, 50, 0, ["Sam"], [sam.address], [0]);
+    expect([...(await pool.currentPolicy())]).to.deep.equal([50n, 50n, 0n]);
+  });
+
+  it("still lets the owner fix a pool whose rules can't pay anyone, so waiting tips are never stuck", async () => {
+    const { ausd, venue, guest, sam, create, approve } = await setup();
+    const pool = await create(venue, [50, 50, 0], [["Sam"], [sam.address], [2]]); // Sam on the bar, bar gets 0%
+    await approve(pool, usd(4) + feeOf(usd(4)));
+    await pool.connect(guest).tipTeam(usd(4), feeOf(usd(4)));
+    await expect(pool.payoutTeam()).to.be.revertedWith("Policy pays no one on the team");
+    await pool.connect(venue).configure(0, 0, 100, ["Sam"], [sam.address], [2]);
+    await pool.payoutTeam();
+    expect(await ausd.balanceOf(sam.address)).to.equal(usd(4));
+    expect(await pool.pendingTips()).to.equal(0);
+  });
+
   it("can't be drained by a hostile token re-entering a payout", async () => {
     const [venue, guest, sam, weep] = await ethers.getSigners();
     const bad = await (await ethers.getContractFactory("ReentrantToken")).deploy();

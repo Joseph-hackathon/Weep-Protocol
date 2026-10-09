@@ -4,7 +4,7 @@
  * WEEP_POOLS is the factory: every business gets its own pool (TipPool) from it, at an address known in advance.
  * It is set per deployment (NEXT_PUBLIC_WEEP_POOLS); a production build without it stops (next.config.ts).
  */
-export const WEEP_POOLS = (process.env.NEXT_PUBLIC_WEEP_POOLS || "0xd2bd0685941DAe339D9E28224a5a912FBEb56317") as `0x${string}`;
+export const WEEP_POOLS = (process.env.NEXT_PUBLIC_WEEP_POOLS || "0xea18adEb9bc624d068eb5ec51fAd66a8FB744996") as `0x${string}`;
 
 export function setupMessage(emails: string[], issuedAt: string, pool: string) {
   return `Weep team setup\nPool: ${pool.toLowerCase()}\nEmails: ${[...emails].sort().join(", ")}\nIssued: ${issuedAt}`;

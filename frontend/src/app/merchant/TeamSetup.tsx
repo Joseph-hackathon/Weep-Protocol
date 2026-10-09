@@ -7,7 +7,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { encodeFunctionData, parseAbi } from "viem";
 import { ArrowUp, ArrowUpRight, Check, ChevronLeft, Minus, Plus, X } from "lucide-react";
 import { requestConnect, useWallet } from "../wallet-bridge";
-import { EXPLORER, FAUCET, WEEP_POOLS, ausdBalance, poolOf, predictPool, readPolicy, readTeam, toDollars, waitForReceipt } from "../chain";
+import { EXPLORER, FAUCET, WEEP_POOLS, ausdBalance, call, poolOf, predictPool, readPolicy, readTeam, toDollars, waitForReceipt } from "../chain";
 import { POLICY_REGISTRY, descriptionHash, readAttestation, type Attestation } from "../attestation";
 import { setupMessage } from "../setup-message";
 import { ensureGas } from "../gas";
@@ -39,6 +39,7 @@ const abi = parseAbi([
   "function create(uint256 foh, uint256 boh, uint256 bar, string[] names, address[] wallets, uint8[] groups) returns (address)",
   "function configure(uint256 foh, uint256 boh, uint256 bar, string[] names, address[] wallets, uint8[] groups)",
   "function payoutTeam()",
+  "function pendingTips() view returns (uint256)",
 ]);
 const GROUP_INDEX: Record<Group, number> = { floor: 0, kitchen: 1, bar: 2 };
 const GROUP_KEYS: Group[] = ["floor", "kitchen", "bar"];
@@ -49,6 +50,11 @@ const NEXT_GROUP: Record<Group, Group> = { floor: "kitchen", kitchen: "bar", bar
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 const initials = (n: string) => n.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 const rejected = (e: unknown) => /reject|denied|cancel/i.test(String((e as { message?: string })?.message ?? e)) || (e as { code?: number })?.code === 4001;
+
+/** Team tips waiting in a pool; a pool can't change its team or split until they're paid out. Older pools: 0. */
+const pendingTips = (pool: string) =>
+  call(pool, encodeFunctionData({ abi, functionName: "pendingTips" })).then(BigInt).catch(() => BigInt(0));
+const PAY_OUT_FIRST = "Tips are waiting in your pool. Pay them out to the team by your current split first, then change the team.";
 
 const PARSE_ERRORS: Record<string, string> = {
   "not-configured": "The setup assistant isn't switched on yet. It needs the Gemini key on the server.",
@@ -161,6 +167,9 @@ export default function TeamSetup() {
     setRunning(true);
     let team = people;
     try {
+      // Waiting team tips go out by the rules they arrived under, so the pool refuses a change until then.
+      if (poolAt && (await pendingTips(poolAt)) > BigInt(0)) throw new Error(PAY_OUT_FIRST);
+
       // The pool these wallets are for: this business's own, or where it's about to be created
       const target = poolAt ?? (await predictPool(address));
 
@@ -214,6 +223,12 @@ export default function TeamSetup() {
   const restart = () => {
     setStage("describe"); setPeople([]); setNotes([]); setError(null); setFromChain(false); setPayout({ state: "idle" });
     setSteps({ wallets: "idle", pool: "idle" });
+  };
+
+  /** Changing the team waits until tips already in the pool are paid out by the current split. */
+  const changeTeam = async () => {
+    if (poolAt && (await pendingTips(poolAt)) > BigInt(0)) { setPayout((p) => ({ ...p, state: "idle", error: PAY_OUT_FIRST })); return; }
+    restart();
   };
 
   /** Pay everything waiting in the pool to the saved team, by the saved split. */
@@ -425,7 +440,7 @@ export default function TeamSetup() {
             {poolAt && <QrLink path={poolLink(poolAt)} name="team-tips" label="Your tip code for the tables" />}
 
             {poolAt && <Link href={poolLink(poolAt)} className="pay-again m-link">See what customers see</Link>}
-            <button type="button" className="m-text-btn" onClick={restart}>{fromChain ? "Change the team" : "Start over"}</button>
+            <button type="button" className="m-text-btn" onClick={changeTeam}>{fromChain ? "Change the team" : "Start over"}</button>
           </motion.div>
         )}
       </AnimatePresence>
