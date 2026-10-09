@@ -9,7 +9,7 @@ User-visible changes to Weep, newest first. Everything below was built during Mo
 - The Privacy notice says what a passkey shares: only its public key, never your fingerprint or face.
 
 ### Changed
-- **A calmer look.** No glows, pulsing dots or drifting background light. Mint marks only the main action on a screen and money that has arrived. Selected chips, the keypad, links, spinners and the scanner frame are neutral. Focus outlines are one violet everywhere. Text uses three levels instead of six greys. Floor, kitchen and bar use three calm, labelled colours. Layout, flows and wording are unchanged.
+- **No glows.** The coloured glow around buttons, dots, photos, the sign-in window and the Monad logo is gone, along with the background light and the halo behind the landing photos. Colours, layout and wording are unchanged.
 
 ## 2026-10-09: waiting tips keep their rules
 
