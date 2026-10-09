@@ -80,7 +80,7 @@ On testnet the fee is paid in test dollars and has no real value.
 1. **Open the live app.** Go to [weep-protocol.vercel.app](https://weep-protocol.vercel.app), choose **Get started**, keep **Individual**, and open **Send**.
 2. **Describe a payment.** Paste `$100 split equally between ama@example.com, kai@example.com and sam@example.com` and press the arrow button. Weep shows $33.34, $33.33 and $33.33, notes that one person gets 1¢ more so it's exact, and shows the $0.30 Weep fee on top.
 3. **Send it.** Sign in with any email. Weep covers the network fee and adds test dollars if you're short, then pays all three in one transaction and shows the receipt, with the fee read back from Monad. If you connect your own wallet instead, it needs a little test MON from the [Monad faucet](https://faucet.monad.xyz).
-4. **Check the chain.** Open the receipt link, or inspect our own run: [a $100.00 payment to three people, plus the $0.30 fee](https://testnet.monadexplorer.com/tx/TODO_TX_SEND).
+4. **Check the chain.** Open the receipt link, or inspect our own run: [a $100.00 payment to three people, plus the $0.30 fee](https://testnet.monadexplorer.com/tx/0x6f4558cbc4837385f5d5b198cdf2059d571d223fb382d014ab9159786b71b3c0). The explorer shows $33.34, $33.33 and $33.33 arriving, and $0.30 going to Weep.
 5. **Try the business side.** Switch to **Business** and open the **Merchant Portal**. Describe a team, for example `Sam (sam@example.com) and Ama (ama@example.com) serve, Kai (kai@example.com) cooks, 70% floor 30% kitchen`. Save it, and one confirmation creates your own pool. **See what customers see** opens your table code.
    - Tip Sam by name, or tip the team. Each shows its 0.5% fee first.
    - Open **Split details** and pay the team out. Anyone can do this.
@@ -117,8 +117,8 @@ The full design, every flow, the trust boundaries and failure handling are in [d
 
 ## Why Monad
 
-- **Paying many people in one transaction is practical.** In our tests, paying 100 new recipients used 2,962,565 gas (fee included), about 2% of Monad's 150,000,000 block gas limit, so a large group payout fits in a single all-or-nothing transaction.
-- **Fast confirmation suits paying in person.** A tip at the table or a payout at the end of a shift needs to finish while people are still there.
+- **Paying a whole team in one transaction is practical.** On Monad testnet, a pool payout to 100 never-used wallets took 3,598,866 gas, about 2.4% of Monad's 150,000,000 block gas limit, and cost about 0.37–0.46 test MON. A payout to 10 people cost about 0.045 MON. ([docs/benchmarks.md](docs/benchmarks.md))
+- **Fast enough to pay people in person.** Every benchmark transaction went from submit to confirmed receipt in 1.9–2.6 seconds, measured from a laptop through Monad's public endpoint. That's quick enough for a tip at the table or a payout at the end of a shift.
 - **It's the standard EVM.** Standard ERC-20 approvals, Solidity, viem and existing wallets work unchanged, so anyone can verify Weep with familiar tools.
 
 ## Contracts
@@ -174,14 +174,16 @@ Each line says where it was checked: on a local test chain, on Monad testnet, or
 
 | What | How it was checked | Where |
 |---|---|---|
-| A payment lands exactly with the fee on top: each person gets their share, the sender pays the total plus 0.3%, the contract keeps $0 | A $100.00 payment to three people ([transaction](https://testnet.monadexplorer.com/tx/TODO_TX_SEND)) | Monad testnet |
-| The business loop on the live site: create a pool, tip by name, tip the team, a different wallet pays out, staff see "team tips" | Create ([tx](https://testnet.monadexplorer.com/tx/TODO_TX_POOL)), named tip ([tx](https://testnet.monadexplorer.com/tx/TODO_TX_NAMED_TIP)), team tip ([tx](https://testnet.monadexplorer.com/tx/TODO_TX_TEAM_TIP)), payout by anyone ([tx](https://testnet.monadexplorer.com/tx/TODO_TX_PAYOUT)) | Live site |
+| A payment lands exactly with the fee on top: each person gets their share ($33.34 / $33.33 / $33.33), the sender pays $100.00 plus $0.30, WeepPay keeps $0 | [Send transaction](https://testnet.monadexplorer.com/tx/0x6f4558cbc4837385f5d5b198cdf2059d571d223fb382d014ab9159786b71b3c0) | Live contracts on Monad testnet, 9 Oct 2026 |
+| The business loop: a new business creates its pool (Sam floor, Ama kitchen, Kai bar; 60/30/10). A guest tips Sam $5 (+$0.025 fee), then tips the team $10 (+$0.05 fee). A different wallet pays out: Sam $6.00, Ama $3.00, Kai $1.00, and the caller gets nothing. The pool ends empty | [Create](https://testnet.monadexplorer.com/tx/0x61f67c67a6df32c23a5f4d9c6108873e872256a7538317173c68aebeced656d3) · [named tip](https://testnet.monadexplorer.com/tx/0xe234cff970cf264928ee4b3d0d59e7d579acfc1a8aa7cc08ee92439d7c6f0190) · [team tip](https://testnet.monadexplorer.com/tx/0xc3fe16a8ecd0b4a0960169a54333a84ca8ab49027736b61b2eda5501022647f1) · [payout by anyone](https://testnet.monadexplorer.com/tx/0x90111369274b6e5cf02b7610707ed9b6c159da3921dcb72411f270d39a0eca99) | Live contracts on Monad testnet, 9 Oct 2026. Run with fresh test wallets by [`live-loop.js`](contracts/scripts/live-loop.js), which checks 19 balances to the unit |
+| The live website shows that pool's team and the fee before signing ("+ $0.025 Weep fee (0.5%) · Sam gets 100%"), and Sam's Employee Dashboard shows $11.00 | The real pages, opened read-only with Sam's address | Live site, 9 Oct 2026 |
+| Cost and speed: pool payouts to 10, 50 and 100 people, and a Send to 20 | [`benchmark.js`](contracts/scripts/benchmark.js), 2 runs each; results in [docs/benchmarks.md](docs/benchmarks.md) | Monad testnet, 9 Oct 2026 |
 | Fees exact on both contracts and paid on top; recipients get 100%; payer charged amount + fee; rounding down; a fee other than the one reviewed is refused; fee settings can't change; fees above 1% refused at deployment | Contract tests (`contracts/test`) | Local chain |
 | A repointed name refuses a named tip; anyone can pay out and only the saved team is paid; team capped at 100; a hostile re-entering token can't drain a pool or a payment | Contract tests | Local chain |
 | All-or-nothing, totals must match, exact allowances, no double payment, insufficient funds, one pool per business, pools can't be set up twice, gas at 100 recipients | Contract tests: 30 in total, 100% of lines and 90.9% of branches covered | Local chain |
 | Shares always add up to the total, to the cent | 7 tests, including 5,000 random payment plans (`frontend/src/app/allocate.test.mts`) | Local |
 | The same email always gives the same wallet; a forged lookup is refused (401) | Two lookups of two new emails, plus one forged signature | Live site, 8 Oct 2026 |
-| The AI reads messy descriptions: paragraphs, "2k", "fifty bucks", fractions, percentages, emails only, wallets, 20 unnamed winners | 14 different descriptions, all read correctly one at a time; it asked instead of guessing when the total was missing or didn't add up | Live site, 8 Oct 2026 |
+| The AI reads messy descriptions: paragraphs, "2k", "fifty bucks", fractions, percentages, emails only, wallets, 20 unnamed winners | 14 different descriptions: 14 of 14 read correctly one at a time, and all 14 answered when sent at once. It asked instead of guessing when the total was missing or didn't add up | Live site, 9 Oct 2026 |
 | Earlier version (before fees): $100 paid exactly to three people, with the contract keeping $0 | [Transaction](https://testnet.monadexplorer.com/tx/0x8be685ec1e20eee98010745c8bbcaf0fa10d1e08967bd1f811f1c9e5594e44e9) on the previous WeepPay | Monad testnet, 8 Oct 2026 |
 
 ## Security and trust
@@ -199,7 +201,7 @@ Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 ## Limits
 
 - Runs on testnet only. Test dollars, and the fees paid in them, have no value, and a payment can't be reversed once confirmed.
-- The AI can misread. Every amount is shown for review, and nothing is sent without your approval. When many requests arrive at once the AI service can be busy, so each model gets a retry before the next one takes over.
+- The AI can misread. Every amount is shown for review, and nothing is sent without your approval. Reading a description takes a few seconds, and up to about 30 seconds when the AI service is busy.
 - Weep doesn't notify people paid by email. They see the payment by signing in with that email.
 - My money and the Employee Dashboard show payments that arrive while they're open, plus what's remembered on the device. Full history is on the [Monad testnet explorer](https://testnet.monadexplorer.com).
 - Wallets connected directly (not by email) pay their own network fee with test MON from the faucet.

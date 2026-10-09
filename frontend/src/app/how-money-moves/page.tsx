@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 const EXPLORER = "https://testnet.monadexplorer.com";
 const SRC = `${REPO}/blob/main`;
 // Our own run on the current contracts: a $100.00 payment to three people, plus the $0.30 fee. Shown once filled in.
-const PROOF_TX = "TODO_TX_SEND";
+const PROOF_TX = "0x6f4558cbc4837385f5d5b198cdf2059d571d223fb382d014ab9159786b71b3c0";
 const isHash = (h: string) => /^0x[0-9a-fA-F]{64}$/.test(h);
 
 
@@ -107,7 +107,7 @@ export default function Page() {
           <li><strong>It asks rather than guesses.</strong> If the total is missing, a person is unclear, or the amounts can&apos;t add up, it asks you a question.</li>
           <li><strong>It doesn&apos;t make people up.</strong> If you say &ldquo;20 winners&rdquo; without naming them, it creates numbered rows and asks how to reach each person.</li>
         </ul>
-        <p>On 8 October 2026 we tried 14 very different descriptions on the live site. They included a long paragraph with the amounts buried inside, &ldquo;2k&rdquo; and &ldquo;1.5k&rdquo;, &ldquo;fifty bucks&rdquo;, &ldquo;USD 1,250.75&rdquo;, fractions and percentages, emails only, raw wallet addresses, a misspelled name, 20 unnamed winners, a request with no total, and amounts that don&apos;t add up. Sent one at a time, all 14 were read correctly, and the last two produced a question instead of a guess. When all 14 were sent at once, 3 came back with &ldquo;Couldn&apos;t read that just now&rdquo; because the AI service was busy. Weep showed that message rather than a wrong draft, and each model now gets a second try before the next one takes over. AI can still make mistakes, and that&apos;s why you check every amount before sending.</p>
+        <p>On 9 October 2026 we tried 14 very different descriptions on the live site. They included a long paragraph with the amounts buried inside, &ldquo;2k&rdquo; and &ldquo;1.5k&rdquo;, &ldquo;fifty bucks&rdquo;, &ldquo;USD 1,250.75&rdquo;, fractions and percentages, emails only, raw wallet addresses, a misspelled name, 20 unnamed winners, a request with no total, and amounts that don&apos;t add up. Sent one at a time, all 14 were read correctly. For the last two it asked a question instead of guessing. Sent all at once, all 14 were answered. Each answer took between 4 and 30 seconds. AI can still make mistakes, and that&apos;s why you check every amount before sending.</p>
       </Part>
 
       <Part id="proof" title="Check it yourself">

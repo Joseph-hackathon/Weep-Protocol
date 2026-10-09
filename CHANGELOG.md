@@ -2,21 +2,32 @@
 
 User-visible changes to Weep, newest first. Everything below was built during Monad Metropolis (1 September – 13 October 2026).
 
-## Unreleased: business model, safer pools and final cleanup
+## 2026-10-09: live with fees, safer pools and the X account
 
-These need new contracts. They go live once the steps in [HANDOFF.md](HANDOFF.md) are done.
+New contracts on Monad testnet, deployed and verified on MonadVision:
+- WeepPay `0x9F24A86a2d35CC9c281Ee87F6A6204aE782BF5F5`, 0.3% fee;
+- WeepPools `0xd2bd0685941DAe339D9E28224a5a912FBEb56317`, 0.5% fee;
+- TipPool template `0x510065532A1CA0DF6316e52f33DC34e6780305Ec`.
+
+The first shared pool is retired, with nothing left in it. A live loop and benchmarks ran on these contracts; see the README's Evidence section.
 
 ### Added
+- **Weep on X.** [@WeepProtocol](https://x.com/WeepProtocol) is in the footer of every page, the README and the docs. Shared links show a summary card with its own image.
 - **Weep's fee.** 0.3% on personal payments (WeepPay) and 0.5% on business tips (TipPool), paid on top by the payer, so recipients and staff receive 100%. Each rate and recipient is fixed at deployment (at most 1%). Every payment or tip must carry the fee the payer reviewed. The fee is shown before signing, and receipts read it back from Monad.
 - **`tipTeam`.** Team tips now go through the pool contract, so the fee is enforced.
 - **Payouts by anyone.** Anyone can pay a pool out, from the table code's *Split details*, after seeing who gets what. It only ever pays the saved team.
 - **Safer named tips.** A named tip carries the wallet the guest saw, and is refused if the name was repointed since.
 - **Re-entrancy guards** on every function that moves tokens, tested with a hostile token. Teams are capped at 100.
-- **`deploy-all.js`** (both contracts, fees from code, recipient from `FEE_RECIPIENT`) and **`retire-shared-pool.js`**.
+- **Scripts.**
+  - `deploy-all.js`: both contracts, fees from code, recipient from `FEE_RECIPIENT`.
+  - `retire-shared-pool.js` and `retire-first-pool.js`.
+  - `create-sponsor.js`: the fee-cover wallet; its key is saved only to `contracts/.env`.
+  - `live-loop.js` and `benchmark.js`.
 - **30 contract tests**, covering 100% of lines and 90.9% of branches.
 
 ### Changed
 - `/customer` without a table code asks for one, instead of opening the first shared pool.
+- The document links moved from the account menu to the footer, so they're on every page and appear only once.
 - A production build stops if the contract addresses aren't set, so a half-configured deploy never goes live.
 
 ### Removed
@@ -24,7 +35,7 @@ These need new contracts. They go live once the steps in [HANDOFF.md](HANDOFF.md
 - The first shared pool (TipSplitter) and its test, the old deploy scripts, and two unused workflow experiments.
 - Generated coding-assistant files from the frontend folder.
 
-## 2026-10-09
+## 2026-10-09 (earlier)
 
 ### Added
 - **Every business gets its own tip pool.** The Merchant Portal creates the business's pool on Monad, with its team and split, in one confirmation (WeepPools at `0x5b9f33a6db109314f4720dd28a5bed9C1Ef53210`, verified). Table codes and links open that business's pool, checked on Monad first. Anyone can now try the whole business flow.
