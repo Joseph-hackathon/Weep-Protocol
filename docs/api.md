@@ -8,7 +8,7 @@ The five server routes the Weep app calls. They run on the website's own server:
 | [`POST /api/send/wallets`](#post-apisendwallets) | Finds or creates the wallet behind each email | `PRIVY_APP_SECRET`, sender's signature |
 | [`POST /api/setup/parse`](#post-apisetupparse) | Reads a team description into people and a split | `GEMINI_API_KEY` |
 | [`POST /api/setup/wallets`](#post-apisetupwallets) | Creates wallets for a team's emails | `PRIVY_APP_SECRET`, the business's signature for its own pool |
-| [`POST /api/gas`](#post-apigas) | Covers the first network fee of an email sign-in | `PRIVY_APP_SECRET`, `GAS_SPONSOR_KEY`, the person's Privy session |
+| [`POST /api/gas`](#post-apigas) | Covers the first network fee of a new email or passkey account | `PRIVY_APP_SECRET`, `GAS_SPONSOR_KEY`, the person's Privy session |
 
 Payments never go through these routes. They are sent from the person's own wallet straight to the contracts, as described in [architecture.md](architecture.md).
 

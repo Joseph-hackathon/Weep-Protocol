@@ -56,7 +56,7 @@ What sets it apart:
 - **Anyone can be paid.** An email is enough. The money lands in a non-custodial wallet tied to that email, with nothing to claim.
 - **Staff don't wait on the owner.** Anyone can pay a team's pool out, and it can only go to the saved team, by the saved split.
 - **Nothing to take on trust.** Receipts are read back from Monad, and every amount links to its transaction.
-- **No crypto chores.** People who sign in with email get their first network fee covered by Weep.
+- **No crypto chores.** Sign in with an email code or a passkey (fingerprint, face or screen lock): no password, no seed phrase. Weep covers a new account's first network fee.
 
 ## Business model
 
@@ -237,7 +237,7 @@ These are plans, not features:
 
 ## Built with
 
-[Monad](https://monad.xyz) for settlement · [Privy](https://privy.io) for email sign-in, embedded wallets and email-to-wallet lookups ([providers.tsx](frontend/src/app/providers.tsx), [send/wallets](frontend/src/app/api/send/wallets/route.ts)) · [Gemini](https://ai.google.dev) for reading descriptions ([send/parse](frontend/src/app/api/send/parse/route.ts)) · [Chainlink CRE](https://docs.chain.link/cre) for reading a team description through Chainlink's network and attesting it on Monad ([cre/](cre)) · AUSD (test), a stand-in for Agora's AUSD dollar · Next.js, viem, Hardhat and OpenZeppelin.
+[Monad](https://monad.xyz) for settlement · [Privy](https://privy.io) for passkey and email sign-in, embedded wallets and email-to-wallet lookups ([ConnectModal.tsx](frontend/src/app/ConnectModal.tsx), [providers.tsx](frontend/src/app/providers.tsx), [send/wallets](frontend/src/app/api/send/wallets/route.ts)) · [Gemini](https://ai.google.dev) for reading descriptions ([send/parse](frontend/src/app/api/send/parse/route.ts)) · [Chainlink CRE](https://docs.chain.link/cre) for reading a team description through Chainlink's network and attesting it on Monad ([cre/](cre)) · AUSD (test), a stand-in for Agora's AUSD dollar · Next.js, viem, Hardhat and OpenZeppelin.
 
 ## Team
 

@@ -2,6 +2,12 @@
 
 User-visible changes to Weep, newest first. Everything below was built during Monad Metropolis (1 September – 13 October 2026).
 
+
+## 2026-10-10: passkey sign-in
+
+### Added
+- **Sign in with a passkey.** Weep's sign-in window has *Continue with a passkey*. *Create a passkey* makes a new account with the device's fingerprint, face or screen lock, and Privy creates its wallet. *Use my passkey* signs back in. No password, no code. New passkey accounts get their first network fee covered, like email ones.
+- The Privacy notice says what a passkey shares: only its public key, never your fingerprint or face.
 ## 2026-10-09: Chainlink CRE
 
 WeepPolicyRegistry `0x6437a6BD79d388E70f726Fee9f15f3d0245ddc9c` on Monad testnet, verified on MonadVision. First attestation: [transaction](https://testnet.monadexplorer.com/tx/0x3803dec912c6d9d4af4776f252f40cb0d712e87bde554e29f3c3f3adf9f77ac3).
