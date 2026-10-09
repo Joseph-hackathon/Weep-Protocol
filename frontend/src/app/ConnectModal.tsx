@@ -3,12 +3,12 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowLeft, Loader2, Mail, Search, X } from "lucide-react";
-import { useLoginWithEmail } from "@privy-io/react-auth";
+import { ArrowLeft, Fingerprint, Loader2, Mail, Search, X } from "lucide-react";
+import { useLoginWithEmail, useLoginWithPasskey, useSignupWithPasskey } from "@privy-io/react-auth";
 import { MONAD_CHAIN, connectDirect, useDirectWallets, type WalletInfo } from "./wallet-store";
 import { readLastMethod, saveLastMethod, type LastMethod } from "./last-method";
 
-type View = "start" | "code" | "wallet";
+type View = "start" | "code" | "wallet" | "passkey";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const enter = { duration: 0.24, ease: [0, 0, 0.38, 0.9] as const };   // motion-medium-2, entrance
@@ -21,7 +21,7 @@ type Props = {
 };
 
 /**
- * Weep's sign-in: two ways in, email or a wallet. One title row (manual §8.4), one column,
+ * Weep's sign-in: email, a passkey, or a wallet. One title row (manual §8.4), one column,
  * one primary action. Desktop: a compact centred dialog. Phones: a bottom sheet.
  */
 export default function ConnectModal({ open, onClose, onAllWallets }: Props) {
@@ -40,6 +40,10 @@ export default function ConnectModal({ open, onClose, onAllWallets }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
   const codeInput = useRef<HTMLInputElement>(null);
+
+  // Passkey: a new account (and its wallet) from the device's fingerprint, face or screen lock, or sign back in
+  const { signupWithPasskey } = useSignupWithPasskey();
+  const { loginWithPasskey } = useLoginWithPasskey();
 
   // Wallets
   const { wallets } = useDirectWallets();
@@ -64,7 +68,7 @@ export default function ConnectModal({ open, onClose, onAllWallets }: Props) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setView("start"); setError(null); setCode(""); setBusy(false); setPickedWallet(null);
     const m = readLastMethod();
-    const usable = m && (m.type === "email" || m.type === "wallet" || m.type === "all") ? m : null;
+    const usable = m && (m.type === "email" || m.type === "wallet" || m.type === "all" || m.type === "passkey") ? m : null;
     setLast(usable);
     if (usable?.type === "email") setEmail(usable.email);
     setShowEmailForm(usable?.type !== "email");
@@ -140,6 +144,20 @@ export default function ConnectModal({ open, onClose, onAllWallets }: Props) {
     if (digits.length === 6) void verify(digits);
   };
 
+  const passkey = async (mode: "create" | "use") => {
+    setView("passkey"); setBusy(true); setError(null);
+    try {
+      await (mode === "create" ? signupWithPasskey() : loginWithPasskey());
+      saveLastMethod({ type: "passkey" });
+      onClose();
+    } catch {
+      setError(mode === "create"
+        ? "The passkey wasn't created. The prompt may have been closed. Try again."
+        : "That didn't sign you in. If you're new to Weep, choose Create a passkey.");
+    }
+    setBusy(false);
+  };
+
   const pickWallet = async (w: WalletInfo) => {
     setPickedWallet(w); setView("wallet"); setError(null); setBusy(true);
     try {
@@ -160,6 +178,7 @@ export default function ConnectModal({ open, onClose, onAllWallets }: Props) {
       icon: <Mail size={20} strokeWidth={1.75} aria-hidden />,
       run: () => void requestCode(undefined, last.email),
     }
+    : last?.type === "passkey" ? { label: "Passkey", icon: <Fingerprint size={20} strokeWidth={1.75} aria-hidden />, run: () => void passkey("use") }
     : last?.type === "all" ? { label: "Your wallet", icon: <Search size={20} strokeWidth={1.75} aria-hidden />, run: onAllWallets }
     : lastWallet ? {
         label: lastWallet.name,
@@ -170,6 +189,7 @@ export default function ConnectModal({ open, onClose, onAllWallets }: Props) {
     : null;
 
   const title = view === "code" ? "Check your email"
+    : view === "passkey" ? "Passkey"
     : view === "wallet" && pickedWallet ? `Open ${pickedWallet.name}`
     : quick ? "Welcome back" : "Sign in";
 
@@ -244,6 +264,11 @@ export default function ConnectModal({ open, onClose, onAllWallets }: Props) {
                   </button>
                 )}
 
+                <button type="button" className="cm-btn cm-btn-secondary" onClick={() => { setView("passkey"); setError(null); }} disabled={busy}>
+                  <Fingerprint size={16} strokeWidth={1.75} aria-hidden />
+                  Continue with a passkey
+                </button>
+
                 <div className="cm-divider"><span>or</span></div>
 
                 <ul className="cm-wallets" aria-label="Wallets">
@@ -309,6 +334,16 @@ export default function ConnectModal({ open, onClose, onAllWallets }: Props) {
                   <span aria-hidden>·</span>
                   <button type="button" className="cm-link" onClick={() => { setView("start"); setError(null); setShowEmailForm(true); }}>Change email</button>
                 </div>
+              </div>
+            )}
+
+            {view === "passkey" && (
+              <div className="cm-body">
+                <p className="cm-sub">Your fingerprint, face or screen lock. No password, no code. New here? Create one and your wallet is made with it.</p>
+                <button type="button" data-autofocus className="cm-btn cm-btn-primary" onClick={() => passkey("create")} disabled={busy}>Create a passkey</button>
+                <button type="button" className="cm-btn cm-btn-secondary" onClick={() => passkey("use")} disabled={busy}>Use my passkey</button>
+                {busy && <p className="cm-status" role="status"><Loader2 size={16} className="cm-spin" aria-hidden /> Waiting for your passkey</p>}
+                {error && <p className="cm-error" role="alert">{error}</p>}
               </div>
             )}
 

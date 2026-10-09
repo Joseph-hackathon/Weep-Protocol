@@ -13,8 +13,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <PrivyProvider
       appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || "cmujnrzih03xh0dl9k6itwgws"}
       config={{
-        // Weep's own sign-in window: email code or a wallet.
-        loginMethods: ["email", "wallet"],
+        // Weep's own sign-in window: email code, a passkey, or a wallet.
+        loginMethods: ["email", "passkey", "wallet"],
         defaultChain: monadTestnet,
         supportedChains: [monadTestnet],
         appearance: {

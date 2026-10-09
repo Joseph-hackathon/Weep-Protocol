@@ -88,7 +88,7 @@ export default function ConnectButton({ openOnMount = false }: { openOnMount?: b
   const privyWallet = visibleWallets.find((w) => w.walletClientType === "privy") ?? visibleWallets[0];
   const address = direct?.address ?? privyWallet?.address ?? (authenticated ? user?.wallet?.address : undefined);
   const onRightNetwork = direct ? direct.chainId === monadTestnet.id : !privyWallet?.chainId || privyWallet.chainId === MONAD;
-  const via = direct?.wallet.name ?? user?.email?.address ?? undefined;
+  const via = direct?.wallet.name ?? user?.email?.address ?? (user?.linkedAccounts.some((a) => a.type === "passkey") ? "Passkey" : undefined);
   const settingUp = authenticated && !address; // signed in; Privy is creating the wallet
   const { createWallet } = useCreateWallet();
   const [setupStuck, setSetupStuck] = useState(false);
