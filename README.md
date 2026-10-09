@@ -6,7 +6,8 @@
   <p>
     <a href="https://weep-protocol.vercel.app">Try it live</a> ·
     <a href="#verify-it-in-two-minutes">Verify it in two minutes</a> ·
-    <a href="https://weep-protocol.vercel.app/how-money-moves">How money moves</a>
+    <a href="https://weep-protocol.vercel.app/how-money-moves">How money moves</a> ·
+    <a href="https://x.com/WeepProtocol">@WeepProtocol on X</a>
   </p>
   <p><sub>Testnet preview · Monad testnet (chain ID 10143) · Test dollars with no real-world value · Contracts not audited</sub></p>
 </div>
@@ -124,9 +125,9 @@ The full design, every flow, the trust boundaries and failure handling are in [d
 
 | Contract | Purpose | Network | Address | Verified source |
 |---|---|---|---|---|
-| WeepPay | One payment to up to 100 people, exact and all-or-nothing; 0.3% fee on top, fixed. No owner. | Monad testnet (10143) | `TODO_ADDR_WEEPPAY` | MonadVision · [WeepPay.sol](contracts/contracts/WeepPay.sol) |
-| WeepPools | Gives every business its own tip pool, in one transaction; 0.5% fee on tips, fixed. No owner. | Monad testnet (10143) | `TODO_ADDR_WEEPPOOLS` | MonadVision · [WeepPools.sol](contracts/contracts/WeepPools.sol) |
-| TipPool | Each business's pool: team, split, named and team tips, payouts anyone can trigger. Cloned per business; owned by that business. | Monad testnet (10143) | template `TODO_ADDR_TIPPOOL` | MonadVision · [TipPool.sol](contracts/contracts/TipPool.sol) |
+| WeepPay | One payment to up to 100 people, exact and all-or-nothing; 0.3% fee on top, fixed. No owner. | Monad testnet (10143) | [`0x9F24A86a2d35CC9c281Ee87F6A6204aE782BF5F5`](https://testnet.monadexplorer.com/address/0x9F24A86a2d35CC9c281Ee87F6A6204aE782BF5F5) | [MonadVision](https://testnet.monadvision.com/address/0x9F24A86a2d35CC9c281Ee87F6A6204aE782BF5F5) · [WeepPay.sol](contracts/contracts/WeepPay.sol) |
+| WeepPools | Gives every business its own tip pool, in one transaction; 0.5% fee on tips, fixed. No owner. | Monad testnet (10143) | [`0xd2bd0685941DAe339D9E28224a5a912FBEb56317`](https://testnet.monadexplorer.com/address/0xd2bd0685941DAe339D9E28224a5a912FBEb56317) | [MonadVision](https://testnet.monadvision.com/address/0xd2bd0685941DAe339D9E28224a5a912FBEb56317) · [WeepPools.sol](contracts/contracts/WeepPools.sol) |
+| TipPool | Each business's pool: team, split, named and team tips, payouts anyone can trigger. Cloned per business; owned by that business. | Monad testnet (10143) | template [`0x510065532A1CA0DF6316e52f33DC34e6780305Ec`](https://testnet.monadexplorer.com/address/0x510065532A1CA0DF6316e52f33DC34e6780305Ec) | [MonadVision](https://testnet.monadvision.com/address/0x510065532A1CA0DF6316e52f33DC34e6780305Ec) · [TipPool.sol](contracts/contracts/TipPool.sol) |
 | AUSD (test) | The 18-decimal test dollar Weep pays in. Anyone can mint. | Monad testnet (10143) | [`0xcEF38D455529Dbc2e37654452C288C25e18ADea4`](https://testnet.monadexplorer.com/address/0xcEF38D455529Dbc2e37654452C288C25e18ADea4) | [MonadVision](https://testnet.monadvision.com/address/0xcEF38D455529Dbc2e37654452C288C25e18ADea4) · [MockAUSD.sol](contracts/contracts/MockAUSD.sol) |
 
 ## Run it locally
@@ -232,6 +233,8 @@ These are plans, not features:
 ## Team
 
 Built for [Monad Metropolis](https://monad.xyz/metropolis), Consumer Products & Payments track, by [Joseph-hackathon](https://github.com/Joseph-hackathon) and [mauyaa](https://github.com/mauyaa).
+
+**Contact:** news and questions on X at [@WeepProtocol](https://x.com/WeepProtocol). Bugs and security reports go through [GitHub issues](https://github.com/Joseph-hackathon/Weep-Protocol/issues), as described in [SECURITY.md](SECURITY.md).
 
 ## AI tools
 

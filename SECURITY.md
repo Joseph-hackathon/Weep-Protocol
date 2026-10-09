@@ -18,6 +18,8 @@ The latest commit on `main` is the only supported version.
 1. [Open an issue](https://github.com/Joseph-hackathon/Weep-Protocol/issues/new) titled **"Security report"** with no details in it. We'll reply there with a private way to send them.
 2. Then send us the affected contract, route or page, what an attacker could do, steps to reproduce it, and the smallest example that shows it.
 
+For anything that isn't a security issue, you can also reach us on X at [@WeepProtocol](https://x.com/WeepProtocol). Please keep security details off X: report them through GitHub as above.
+
 Please don't disclose the problem publicly, or use it against other people's wallets, until it's fixed. Testing against your own wallets on testnet is fine.
 
 ## What happens next

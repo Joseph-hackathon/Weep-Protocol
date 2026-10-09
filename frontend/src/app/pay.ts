@@ -6,7 +6,7 @@ import { encodeFunctionData, keccak256, parseAbi, toHex } from "viem";
  * holds no money (contracts/contracts/WeepPay.sol). Set per deployment with NEXT_PUBLIC_WEEP_PAY; a production
  * build without it stops (next.config.ts).
  */
-export const PAY = (process.env.NEXT_PUBLIC_WEEP_PAY || "0x0000000000000000000000000000000000000000") as `0x${string}`;
+export const PAY = (process.env.NEXT_PUBLIC_WEEP_PAY || "0x9F24A86a2d35CC9c281Ee87F6A6204aE782BF5F5") as `0x${string}`;
 export const MAX_RECIPIENTS = 100;
 
 const abi = parseAbi(["function pay(address[] to, uint256[] amounts, uint256 total, uint256 expectedFee, bytes32 ref)"]);
