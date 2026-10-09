@@ -109,7 +109,7 @@ sequenceDiagram
 
 1. **Set up** (Merchant Portal). Any business can do this; each gets its own pool.
    1. `/api/setup/parse` reads the team description: names, emails, groups and split.
-   2. The business reviews it.
+   2. The business reviews it. If Weep's Chainlink CRE workflow has attested this exact description for this pool, and the review still matches, the card says *Read by Chainlink CRE · attested on Monad* (see [Chainlink CRE](#chainlink-cre)).
    3. `/api/setup/wallets` creates wallets for every email. The request names the pool and is signed by its owner, or, before it exists, by the wallet whose pool `WeepPools.predict` puts at that address. The server checks both on Monad.
    4. One confirmation: `WeepPools.create(split, names, wallets, groups)` the first time, or `TipPool.configure(...)` to change it later.
    5. The live screen shows the table code: `/customer?pool=<the business's pool>`.
@@ -135,6 +135,19 @@ The rules live in [`allocate.ts`](../frontend/src/app/allocate.ts):
 
 If fixed and percentage amounts exceed the total, or nothing is left for equal rows, the review shows the problem and sending is disabled. WeepPay checks the sum again on-chain.
 
+### Chainlink CRE
+
+The [`cre/weep-policy`](../cre) workflow reads a team description through Chainlink's network and records the result on Monad.
+
+1. An HTTP trigger receives `{ pool, description }`.
+2. Through the HTTP capability, Gemini reads the team and split at temperature 0, against a fixed schema. The response is cached across nodes, so they reach identical-answer consensus.
+3. `policy.ts` checks the answer by the pool's rules: the split adds up to 100, 1–100 people, unique names, and no name that looks like an email or wallet.
+4. The workflow encodes `(pool, keccak256(description), foh, boh, bar, names, groups)` as a report the DON signs. `writeReport` delivers it through the Chainlink Forwarder to `WeepPolicyRegistry.onReport`.
+5. The registry checks the same rules again, stores the latest policy for that pool and emits `PolicyAttested`.
+6. The Merchant Portal reads `policyOf(pool)`. It shows the line only when the description's hash matches the text the business typed and the reviewed team and split are identical.
+
+The registry is a record. It can't move money or change a pool; saving is still the business's own `create` or `configure`.
+
 ## Trust boundaries
 
 | Actor | Can | Can't |
@@ -147,6 +160,7 @@ If fixed and percentage amounts exceed the total, or nothing is left for equal r
 | WeepPools | Create one pool per business, owned by that business | Change, pause or drain any pool (it has no owner and no admin functions) |
 | Weep server | Ask Privy for wallets for emails a signer named; read text with Gemini; send 0.1 test MON to a signed-in person's own email wallet when it's low | Sign transactions for anyone, hold their keys, or move their funds |
 | Privy | Create and link non-custodial wallets to emails; run sign-in | Spend from a user's wallet (non-custodial) |
+| Chainlink Forwarder | Write a DON-signed policy record to WeepPolicyRegistry | Change any pool, move any funds, or write a policy the pool would refuse |
 | Gemini | Draft rows from text | Calculate amounts or send anything (the code does the maths; the person approves) |
 
 Abuse controls on the server routes:
@@ -196,9 +210,10 @@ Weep's server keeps no data. Privy holds sign-in emails and their wallets. Monad
 
 ```text
 contracts/            Solidity contracts, Hardhat tests, deploy scripts
-  contracts/          WeepPay.sol · WeepPools.sol · TipPool.sol · MockAUSD.sol · mocks/ReentrantToken.sol (tests only)
-  scripts/            deploy-all.js · retire-shared-pool.js
-  test/               WeepPay.test.js · WeepPools.test.js
+  contracts/          WeepPay.sol · WeepPools.sol · TipPool.sol · WeepPolicyRegistry.sol · MockAUSD.sol · mocks/ReentrantToken.sol (tests only)
+  scripts/            deploy-all.js · deploy-policy-registry.js · retire-shared-pool.js · live-loop.js · benchmark.js
+  test/               WeepPay.test.js · WeepPools.test.js · WeepPolicyRegistry.test.js
+cre/                  Chainlink CRE project: weep-policy workflow (TypeScript), CLI settings
 frontend/             Next.js app (App Router)
   src/app/            pages, components, chain and amount logic
   src/app/api/        send/{parse,wallets} · setup/{parse,wallets} · gas

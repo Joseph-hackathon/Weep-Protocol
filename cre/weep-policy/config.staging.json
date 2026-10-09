@@ -1,0 +1,10 @@
+{
+  "geminiModel": "gemini-3.5-flash",
+  "evms": [
+    {
+      "chainSelectorName": "monad-testnet",
+      "registry": "0x0000000000000000000000000000000000000000",
+      "gasLimit": "1500000"
+    }
+  ]
+}
