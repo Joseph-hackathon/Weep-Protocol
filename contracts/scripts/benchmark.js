@@ -8,7 +8,7 @@ import hre from "hardhat";
  * submitting it to its receipt, polled every 200 ms. Every recipient is a fresh, never-used address (the costliest
  * case). Prints a Markdown table and a JSON line for docs/benchmarks.md.
  *
- *   WEEP_PAY=0x… WEEP_POOLS=0x… RUNS=3 npx hardhat run scripts/benchmark.js --network monadTestnet
+ *   RUNS=3 npx hardhat run scripts/benchmark.js --network monadTestnet   (WEEP_PAY / WEEP_POOLS default to the live contracts)
  *
  * Costs roughly 2–4 test MON at current testnet gas prices. Needs PRIVATE_KEY in contracts/.env.
  */
@@ -35,7 +35,8 @@ async function timed(me, send) {
 
 async function main() {
   const RUNS = Number(process.env.RUNS || 3);
-  const { WEEP_PAY, WEEP_POOLS } = process.env;
+  const WEEP_PAY = process.env.WEEP_PAY || "0x9F24A86a2d35CC9c281Ee87F6A6204aE782BF5F5";
+  const WEEP_POOLS = process.env.WEEP_POOLS || "0xd2bd0685941DAe339D9E28224a5a912FBEb56317";
   if (!hre.ethers.isAddress(WEEP_PAY ?? "") || !hre.ethers.isAddress(WEEP_POOLS ?? "")) throw new Error("Set WEEP_PAY and WEEP_POOLS to the deployed addresses.");
   const [me] = await hre.ethers.getSigners();
   const net = await hre.ethers.provider.getNetwork();
