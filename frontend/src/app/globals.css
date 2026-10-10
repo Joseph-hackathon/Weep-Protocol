@@ -187,7 +187,7 @@
 .panel-identity-text { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
 .panel-address { font-family: var(--font-geist-mono), ui-monospace, monospace; font-size: 14px; line-height: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .panel-network { display: inline-flex; align-items: center; gap: var(--space-2); font-size: 12px; line-height: 16px; color: var(--text-muted); }
-.network-dot { width: 6px; height: 6px; border-radius: var(--radius-full); background: var(--status-success); box-shadow: 0 0 6px rgba(74, 222, 128, .6); }
+.network-dot { width: 6px; height: 6px; border-radius: var(--radius-full); background: var(--status-success); box-shadow: none; }
 .panel-balance {
   display: flex; flex-direction: column; gap: var(--space-1);
   margin: 0 var(--space-1); padding: var(--space-3);
@@ -315,7 +315,7 @@
   padding: var(--space-4) var(--space-6) var(--space-6);
   border-radius: var(--radius-3);
   background: var(--surface-overlay); border: 1px solid var(--border-default);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, .6), 0 0 0 1px rgba(0, 0, 0, .4), 0 0 80px rgba(110, 84, 255, .08);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, .6), 0 0 0 1px rgba(0, 0, 0, .4);
   scrollbar-width: thin;
 }
 @media (max-width: 599px) {
@@ -421,7 +421,7 @@
 
 /* ── Wrong network (manual §7.3: never colour alone, so icon + words + action) ─── */
 .panel-network.is-wrong { color: var(--status-warning); }
-.panel-network.is-wrong .network-dot { background: var(--status-warning); box-shadow: 0 0 6px rgba(252, 211, 77, .6); }
+.panel-network.is-wrong .network-dot { background: var(--status-warning); box-shadow: none; }
 .panel-item.is-warning { color: var(--status-warning); }
 .panel-item.is-warning svg { color: var(--status-warning); }
 .panel-item.is-warning:hover, .panel-item.is-warning:focus-visible { background: rgba(252, 211, 77, .08); color: var(--status-warning); }
@@ -568,7 +568,7 @@
 .flower-photo img { object-fit: cover; }
 .flower-petal[data-lit="true"] .flower-photo {
   filter: none;
-  box-shadow: 0 0 0 1px rgba(196, 170, 255, .5), 0 0 40px -8px rgba(124, 77, 255, .6), 0 24px 48px -16px rgba(0, 0, 0, .85);
+  box-shadow: 0 0 0 1px rgba(196, 170, 255, .5), 0 24px 48px -16px rgba(0, 0, 0, .85);
 }
 /* Chips: one rule for every petal — centred on its top edge, straddling it, kept upright. */
 .flower-chip {
@@ -580,14 +580,14 @@
 }
 .flower-chip b { font-family: var(--font-geist-mono), ui-monospace, monospace; font-weight: 600; color: var(--text-primary); }
 .flower-chip:not(.flower-chip-tip) b { color: var(--status-success); }
-.flower-dot { width: 6px; height: 6px; border-radius: var(--radius-full); background: var(--status-success); box-shadow: 0 0 8px rgba(74, 222, 128, .8); }
+.flower-dot { width: 6px; height: 6px; border-radius: var(--radius-full); background: var(--status-success); box-shadow: none; }
 @media (max-width: 599px) {
   .flower-chip { height: 24px; padding: 0 var(--space-2); font-size: 11px; }
   .flower-chip-label, .flower-dot, .flower-cents { display: none; }   /* "+$4" so neighbours never touch */
 }
 /* Each time a tip lands, the Monad mark answers. */
 .powered-by-logo { transition: filter var(--motion-slow-1) var(--ease-standard); }
-html[data-settle="true"] .powered-by-logo { filter: drop-shadow(0 0 8px rgba(131, 110, 249, .9)) brightness(1.25); }
+html[data-settle="true"] .powered-by-logo { filter: none; }
 @media (prefers-reduced-motion: reduce) { .flower-photo, .powered-by-logo { transition: none; } }
 
 /* During the hand-off the folded flower stays mounted for one beat, out of flow and invisible
@@ -669,7 +669,7 @@ html[data-settle="true"] .powered-by-logo { filter: drop-shadow(0 0 8px rgba(131
   .role-chevron { display: none; }
   /* Hover says "this opens": the outline lights up. Nothing moves. */
   @media (hover: hover) {
-    .role-card:hover .role-photo { box-shadow: 0 0 0 1px rgba(196, 170, 255, .5), 0 0 40px -8px rgba(124, 77, 255, .6), 0 24px 48px -16px rgba(0, 0, 0, .85); }
+    .role-card:hover .role-photo { box-shadow: 0 0 0 1px rgba(196, 170, 255, .5), 0 24px 48px -16px rgba(0, 0, 0, .85); }
   }
   .role-card:focus-visible .role-photo { box-shadow: 0 0 0 2px var(--border-focus); }
 }
@@ -756,7 +756,7 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
     font-size: 12px; line-height: 16px; font-weight: 500; color: var(--text-primary);
     animation: rise 500ms cubic-bezier(.2, .8, .2, 1) both; animation-delay: var(--d, 0ms);
   }
-  .role-chip-dot { width: 6px; height: 6px; flex: none; border-radius: var(--radius-full); background: var(--status-success); box-shadow: 0 0 8px rgba(74, 222, 128, .8); animation: chip-pulse 2.8s ease-in-out infinite; }
+  .role-chip-dot { width: 6px; height: 6px; flex: none; border-radius: var(--radius-full); background: var(--status-success); box-shadow: none; animation: chip-pulse 2.8s ease-in-out infinite; }
   .role-chip-amount { position: relative; display: inline-flex; overflow: hidden; height: 16px; }
   .role-chip-amount b { display: block; font-family: var(--font-geist-mono), ui-monospace, monospace; font-weight: 600; color: var(--status-success); }
   .role-chip-muted { color: var(--text-secondary); }
@@ -798,7 +798,7 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
 .pay-to-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .pay-to-name { font-size: 16px; line-height: 20px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pay-status { display: flex; align-items: center; gap: 6px; font-size: 11px; line-height: 16px; color: var(--pay-muted); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pay-live { width: 6px; height: 6px; flex: none; border-radius: var(--radius-full); background: var(--pay-lime); box-shadow: 0 0 8px rgba(162, 233, 128, .6); animation: chip-pulse 2.4s ease-in-out infinite; }
+.pay-live { width: 6px; height: 6px; flex: none; border-radius: var(--radius-full); background: var(--pay-lime); box-shadow: none; animation: chip-pulse 2.4s ease-in-out infinite; }
 .pay-details-btn {
   position: relative; flex: none; height: 28px; padding: 0 var(--space-3); border-radius: var(--radius-2); cursor: pointer;
   font-size: 11px; font-weight: 500; color: #d4d4d8; background: transparent; border: 1px solid var(--pay-line);
@@ -846,7 +846,7 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
   transition: background-color var(--motion-fast-2) var(--ease-standard), color var(--motion-fast-2) var(--ease-standard), border-color var(--motion-fast-2) var(--ease-standard), box-shadow var(--motion-fast-2) var(--ease-standard);
 }
 .pay-chip:hover { border-color: #71717a; color: #fff; }
-.pay-chip[aria-pressed="true"] { color: var(--pay-ink); background: var(--pay-lime); border-color: var(--pay-lime); box-shadow: 0 0 15px rgba(162, 233, 128, .25); }
+.pay-chip[aria-pressed="true"] { color: var(--pay-ink); background: var(--pay-lime); border-color: var(--pay-lime); box-shadow: none; }
 .pay-chip:focus-visible, .pay-key:focus-visible, .pay-max:focus-visible, .pay-details-btn:focus-visible { outline: 2px solid var(--pay-lime); outline-offset: 2px; }
 .pay-chip:disabled { cursor: default; opacity: .6; }
 
@@ -907,10 +907,10 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
 .pay-send {
   position: relative; overflow: hidden; height: 52px; border: 0; border-radius: var(--radius-3); cursor: pointer;
   font-size: 15px; line-height: 20px; font-weight: 600; letter-spacing: .01em; color: var(--pay-ink); background: var(--pay-lime);
-  box-shadow: 0 4px 20px rgba(162, 233, 128, .2);
+  box-shadow: none;
   transition: background-color var(--motion-medium-2) var(--ease-standard), color var(--motion-medium-2) var(--ease-standard), box-shadow var(--motion-medium-2) var(--ease-standard), translate var(--motion-fast-2) var(--ease-standard);
 }
-.pay-send:hover:not(:disabled) { background: var(--pay-lime-hover); translate: 0 -1px; box-shadow: 0 0 24px rgba(162, 233, 128, .35); }
+.pay-send:hover:not(:disabled) { background: var(--pay-lime-hover); translate: 0 -1px; box-shadow: none; }
 .pay-send:active:not(:disabled) { translate: 0 0; }
 .pay-send:focus-visible { outline: 2px solid var(--pay-lime); outline-offset: 3px; }
 .pay-send:disabled:not(.is-busy) { opacity: .4; cursor: default; box-shadow: none; }
@@ -918,7 +918,7 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
 .pay-send-label { position: relative; display: inline-grid; overflow: hidden; vertical-align: middle; }
 .pay-send-label > span { grid-area: 1 / 1; white-space: nowrap; }
 /* A thin line along the bottom of the button fills as the payment moves forward. */
-.pay-send-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; transform-origin: left center; background: var(--pay-lime); box-shadow: 0 0 10px rgba(162, 233, 128, .6); }
+.pay-send-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; transform-origin: left center; background: var(--pay-lime); box-shadow: none; }
 /* While working: three calm dots after the label. */
 .pay-ellipsis { display: inline-block; width: 1.2em; text-align: left; }
 .pay-ellipsis::after { content: ""; animation: pay-dots 1.2s steps(4, end) infinite; }
@@ -934,7 +934,7 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
 
 /* Done: a drawn lime check, the amount, and the money spreading across the split. */
 .pay-done { align-items: center; text-align: center; padding-top: var(--space-8); }
-.pay-check { width: 72px; height: 72px; filter: drop-shadow(0 0 12px rgba(162, 233, 128, .35)); }
+.pay-check { width: 72px; height: 72px; filter: none; }
 .pay-check circle, .pay-check path { fill: none; stroke: var(--pay-lime); stroke-linecap: round; stroke-linejoin: round; }
 .pay-check circle { stroke-width: 3; opacity: .45; }
 .pay-check path { stroke-width: 4; }
@@ -1015,8 +1015,8 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
 .btn-account:hover { background: var(--raised-hover); border-color: #3d3354; }
 .btn-account[aria-expanded="true"] { background: var(--raised-hover); border-color: rgba(162, 233, 128, .45); }
 .btn-account:focus-visible { outline-color: var(--mint); }
-.acct-dot { flex: none; width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--mint); box-shadow: 0 0 8px rgba(162, 233, 128, .7); animation: chip-pulse 2.4s ease-in-out infinite; }
-.acct-dot.is-wrong { background: var(--status-warning); box-shadow: 0 0 8px rgba(252, 211, 77, .6); }
+.acct-dot { flex: none; width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--mint); box-shadow: none; animation: chip-pulse 2.4s ease-in-out infinite; }
+.acct-dot.is-wrong { background: var(--status-warning); box-shadow: none; }
 .btn-account .account-address, .panel-address { font-family: var(--font-geist-sans), system-ui, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 0; }
 .btn-account .account-address { font-size: inherit; line-height: 16px; font-weight: 600; color: #fff; }
 .btn-account .account-chevron { color: #a1a1aa; }
@@ -1025,7 +1025,7 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
 /* The account menu: the same dark card. */
 .account-panel { background: var(--deep); border: 1px solid var(--line); border-radius: var(--radius-4); box-shadow: 0 30px 60px -20px rgba(0, 0, 0, .85); }
 .panel-address { color: #fff; }
-.panel-network .network-dot { background: var(--mint); box-shadow: 0 0 6px rgba(162, 233, 128, .6); }
+.panel-network .network-dot { background: var(--mint); box-shadow: none; }
 .panel-balance { background: var(--well); border: 1px solid var(--well-line); }
 .panel-balance-value { font-family: var(--font-geist-sans), system-ui, sans-serif; font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; color: #fff; }
 .panel-fee-line { font-size: 12px; line-height: 16px; color: #a1a1aa; font-variant-numeric: tabular-nums; }
@@ -1036,8 +1036,8 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
 @media (prefers-reduced-motion: reduce) { .acct-dot { animation: none; } .btn-connect, .btn-account { transition: none; } }
 
 /* "Get started" stays white, with the faintest lavender in it, and a soft purple glow. */
-.hero-cta.btn-connect { background: #f6f3ff; border-color: #f6f3ff; color: #0b0614; box-shadow: 0 4px 22px rgba(169, 150, 255, .16); }
-.hero-cta.btn-connect:hover:not(:disabled) { background: #fff; box-shadow: 0 0 26px rgba(169, 150, 255, .28); }
+.hero-cta.btn-connect { background: #f6f3ff; border-color: #f6f3ff; color: #0b0614; box-shadow: none; }
+.hero-cta.btn-connect:hover:not(:disabled) { background: #fff; box-shadow: none; }
 
 /* ── Customer on phones and tablets: a bottom sheet ───────────────────────────────────────────────
    On touch screens the payment card sits on the bottom edge like a native sheet: full width (centred on
@@ -1121,7 +1121,7 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
 .m-input::placeholder { color: #625b78; }
 .m-send {
   position: absolute; right: 10px; bottom: 10px; display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: var(--radius-full); cursor: pointer;
-  color: var(--pay-ink); background: var(--pay-lime); box-shadow: 0 4px 16px rgba(162, 233, 128, .25);
+  color: var(--pay-ink); background: var(--pay-lime); box-shadow: none;
   transition: background-color var(--motion-fast-2) var(--ease-standard), transform var(--motion-fast-2) var(--ease-standard), opacity var(--motion-fast-2) var(--ease-standard);
 }
 .m-send::before { content: ""; position: absolute; inset: -4px; }
@@ -1210,11 +1210,11 @@ a.m-wallet:hover { text-decoration: underline; text-underline-offset: 3px; }
 .e-line { margin-top: calc(-1 * var(--space-2)); font-size: 14px; line-height: 20px; color: var(--pay-pale); }
 
 .e-amount { padding-top: var(--space-4); }
-.e-card.is-celebrating .e-amount { text-shadow: 0 0 32px rgba(162, 233, 128, .35); transition: text-shadow 600ms var(--ease-standard); }
+.e-card.is-celebrating .e-amount { text-shadow: none; transition: text-shadow 600ms var(--ease-standard); }
 .e-skeleton { display: inline-block; width: 160px; height: 52px; border-radius: var(--radius-3); vertical-align: middle; }
 .e-under { display: flex; justify-content: center; min-height: 28px; margin-top: calc(-1 * var(--space-2)); }
 .e-calm { font-size: 13px; line-height: 28px; color: #8b8598; }
-.e-arrived { display: inline-flex; align-items: center; height: 28px; padding: 0 var(--space-3); border-radius: var(--radius-full); font-size: 13px; font-weight: 600; color: var(--pay-ink); background: var(--pay-lime); box-shadow: 0 0 20px rgba(162, 233, 128, .4); }
+.e-arrived { display: inline-flex; align-items: center; height: 28px; padding: 0 var(--space-3); border-radius: var(--radius-full); font-size: 13px; font-weight: 600; color: var(--pay-ink); background: var(--pay-lime); box-shadow: none; }
 .e-feed { margin: 0; padding: 0; list-style: none; }
 .e-feed li { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; overflow: hidden; }
 .e-feed li + li { border-top: 1px solid var(--pay-line-soft); }
@@ -1373,7 +1373,7 @@ a.e-feed-amount:hover { text-decoration: underline; text-underline-offset: 3px; 
 .t-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 300ms var(--ease-standard); }
 .t-finder.is-live .t-video { opacity: 1; }
 .t-corners { position: absolute; inset: 18%; pointer-events: none; }
-.t-corners i { position: absolute; width: 28px; height: 28px; border: 3px solid var(--pay-lime); filter: drop-shadow(0 0 6px rgba(162, 233, 128, .5)); }
+.t-corners i { position: absolute; width: 28px; height: 28px; border: 3px solid var(--pay-lime); filter: none; }
 .t-corners i:nth-child(1) { top: 0; left: 0; border-right: 0; border-bottom: 0; border-top-left-radius: var(--radius-3); }
 .t-corners i:nth-child(2) { top: 0; right: 0; border-left: 0; border-bottom: 0; border-top-right-radius: var(--radius-3); }
 .t-corners i:nth-child(3) { bottom: 0; left: 0; border-right: 0; border-top: 0; border-bottom-left-radius: var(--radius-3); }
@@ -1557,3 +1557,9 @@ body:has(.doc) .site-footer { position: relative; }
   .doc-contents { padding: var(--space-3) var(--space-4); }
   .doc-contents a { font-size: 13px; line-height: 18px; }
 }
+
+/* No glows: the drifting background light and the halo behind the landing photos are off. */
+.void-glow, .flower::before { display: none; }
+
+/* No grid behind the chooser ("Where would you like to go?"), on any screen. */
+.chooser-floor { display: none; }
