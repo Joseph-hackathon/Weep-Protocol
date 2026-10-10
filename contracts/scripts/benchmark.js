@@ -36,7 +36,7 @@ async function timed(me, send) {
 async function main() {
   const RUNS = Number(process.env.RUNS || 3);
   const WEEP_PAY = process.env.WEEP_PAY || "0x9F24A86a2d35CC9c281Ee87F6A6204aE782BF5F5";
-  const WEEP_POOLS = process.env.WEEP_POOLS || "0xd2bd0685941DAe339D9E28224a5a912FBEb56317";
+  const WEEP_POOLS = process.env.WEEP_POOLS || "0xea18adEb9bc624d068eb5ec51fAd66a8FB744996";
   if (!hre.ethers.isAddress(WEEP_PAY ?? "") || !hre.ethers.isAddress(WEEP_POOLS ?? "")) throw new Error("Set WEEP_PAY and WEEP_POOLS to the deployed addresses.");
   const [me] = await hre.ethers.getSigners();
   const net = await hre.ethers.provider.getNetwork();

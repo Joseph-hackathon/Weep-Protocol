@@ -154,7 +154,7 @@ The registry is a record. It can't move money or change a pool; saving is still 
 |---|---|---|
 | Sender | Pay anyone up to the amount their wallet allowed | Spend another wallet's funds |
 | WeepPay | Move a sender's AUSD within the allowance the sender gave, in a payment the sender signed | Hold funds, be paused, be upgraded, or be controlled by anyone (it has no owner) |
-| A business (pool owner) | Set its own pool's team and split | Touch any other business's pool; take a tip sent to a person by name, which never enters the pool; change the fee |
+| A business (pool owner) | Set its own pool's team and split, once any team tips waiting in it are paid out | Change the rules for tips already waiting; touch any other business's pool; take a tip sent to a person by name, which never enters the pool; change the fee |
 | Anyone | Pay a pool out | Choose who gets paid: a payout only ever goes to the saved team, by the saved split |
 | Weep (fee recipient) | Receive the fee set at deployment | Change the fee rate or recipient, or touch any payment or pool |
 | WeepPools | Create one pool per business, owned by that business | Change, pause or drain any pool (it has no owner and no admin functions) |

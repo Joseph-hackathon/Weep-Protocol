@@ -23,6 +23,8 @@ interface IPoolSettings {
  *  - The fee rate and recipient are copied once from WeepPools' fixed settings, and can't be changed.
  *  - A guest's tip is checked against what they reviewed: the fee, and for a named tip the person's wallet.
  *  - Anyone can pay the pool out, but only to the saved team, by the saved split.
+ *  - Team tips waiting in the pool are paid out by the rules they were given under: the owner can't change the
+ *    team or the split until they've been paid out.
  */
 contract TipPool is ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -48,6 +50,9 @@ contract TipPool is ReentrancyGuard {
     Policy public currentPolicy;
     mapping(string => address) public employeeWallets;
     Member[] private team;
+    /// @notice Team tips received through tipTeam and not yet paid out. Tokens sent to the pool any other way
+    /// don't count, so nobody can block a change by sending the pool a stray amount.
+    uint256 public pendingTips;
 
     event TipDistributed(address indexed by, uint256 totalAmount, uint256 fohAmount, uint256 bohAmount, uint256 barAmount);
     event PolicyUpdated(uint256 foh, uint256 boh, uint256 bar);
@@ -91,6 +96,9 @@ contract TipPool is ReentrancyGuard {
         uint256 foh, uint256 boh, uint256 bar,
         string[] calldata names, address[] calldata wallets, uint8[] calldata groups
     ) external onlyOwner {
+        // Tips waiting in the pool go out by the rules they arrived under. The one exception is a pool whose rules
+        // pay nobody on its team: payout can't run there, so the owner must be able to fix it.
+        require(pendingTips == 0 || !_paysSomeone(), "Pay out pending tips first");
         _setPolicy(foh, boh, bar);
         _setTeam(names, wallets, groups);
     }
@@ -124,6 +132,7 @@ contract TipPool is ReentrancyGuard {
     function tipTeam(uint256 amount, uint256 expectedFee) external nonReentrant {
         require(amount > 0, "Amount must be greater than zero");
         uint256 fee = _checkedFee(amount, expectedFee);
+        pendingTips += amount;
         ausdToken.safeTransferFrom(msg.sender, address(this), amount);
         if (fee > 0) ausdToken.safeTransferFrom(msg.sender, feeRecipient, fee);
         emit TeamTip(msg.sender, amount, fee);
@@ -145,6 +154,7 @@ contract TipPool is ReentrancyGuard {
         uint256 activeRatio;
         for (uint256 g = 0; g < 3; g++) if (counts[g] > 0) activeRatio += ratios[g];
         require(activeRatio > 0, "Policy pays no one on the team");
+        pendingTips = 0; // everything in the pool is paid out now, by the current rules
 
         uint256[3] memory totals;
         for (uint256 g = 0; g < 3; g++) if (counts[g] > 0) totals[g] = (totalPool * ratios[g]) / activeRatio;
@@ -154,6 +164,13 @@ contract TipPool is ReentrancyGuard {
             if (share > 0) ausdToken.safeTransfer(team[i].wallet, share);
         }
         emit TipDistributed(msg.sender, totalPool, totals[0], totals[1], totals[2]);
+    }
+
+    /// @dev Whether a payout would pay anyone: someone on the team is in a group the split gives a share to.
+    function _paysSomeone() private view returns (bool) {
+        uint256[3] memory ratios = [currentPolicy.fohRatio, currentPolicy.bohRatio, currentPolicy.barRatio];
+        for (uint256 i = 0; i < team.length; i++) if (ratios[team[i].group] > 0) return true;
+        return false;
     }
 
     function _checkedFee(uint256 amount, uint256 expectedFee) private view returns (uint256 fee) {

@@ -11,6 +11,7 @@ What Weep's main transactions cost and how long they take on Monad, measured wit
 | Contracts | WeepPay `0x9F24A86a2d35CC9c281Ee87F6A6204aE782BF5F5`, WeepPools `0xd2bd0685941DAe339D9E28224a5a912FBEb56317` |
 | Script | [`contracts/scripts/benchmark.js`](../contracts/scripts/benchmark.js) |
 | Sample size | 2 runs of each transaction |
+| Note | Measured on the WeepPools above, before the pending-tips change of 9 October. Payouts now also clear one stored counter, a small fixed cost per payout. |
 
 ## Method
 

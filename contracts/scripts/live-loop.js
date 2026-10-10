@@ -5,7 +5,9 @@ import hre from "hardhat";
  *   1. a business creates its pool: Sam (floor), Ama (kitchen), Kai (bar), split 60/30/10
  *   2. a guest tips Sam $5 by name            (0.5% fee on top)
  *   3. the guest tips the team $10             (0.5% fee on top)
+ *      → the business can't change the team or split while that tip waits (checked without sending)
  *   4. a different wallet pays the team out
+ *      → after the payout, the business changes the split
  *   5. the guest sends $100 to three people    (0.3% fee on top)
  * Every balance is checked to the unit, and every transaction hash is printed. The deployer funds the
  * throwaway wallets with a little test MON; test dollars come from the AUSD test token's public mint.
@@ -15,7 +17,7 @@ import hre from "hardhat";
  */
 const AUSD = "0xcEF38D455529Dbc2e37654452C288C25e18ADea4";
 const PAY = process.env.WEEP_PAY || "0x9F24A86a2d35CC9c281Ee87F6A6204aE782BF5F5";
-const POOLS = process.env.WEEP_POOLS || "0xd2bd0685941DAe339D9E28224a5a912FBEb56317";
+const POOLS = process.env.WEEP_POOLS || "0xea18adEb9bc624d068eb5ec51fAd66a8FB744996";
 const { ethers } = hre;
 const U = (cents) => BigInt(cents) * 10n ** 16n;
 const $ = (u) => "$" + ethers.formatUnits(u, 18);
@@ -72,6 +74,10 @@ async function main() {
   ok((await bal(poolAt)) === U(1000), "pool holds exactly $10.00 (100% of the tip)");
   ok(g0 - (await bal(guest.address)) === U(1000) + fee && fee === U(5), `guest paid $10.00 + ${$(fee)} fee`);
   ok((await bal(feeTo)) - f0 === fee, "fee went to Weep's fee recipient");
+  ok((await pool.pendingTips()) === U(1000), "pool records $10.00 of team tips waiting");
+  let blocked = "";
+  try { await pool.connect(business).configure.staticCall(100, 0, 0, ["Sam"], [sam], [0]); } catch (e) { blocked = String(e.shortMessage || e.message); }
+  ok(blocked.includes("Pay out pending tips first"), "business can't change the split while tips are waiting");
 
   // 4. A different wallet pays out
   const before = await Promise.all([sam, ama, kai, payer.address].map(bal));
@@ -84,6 +90,13 @@ async function main() {
   ok(got[3] === 0n, "the wallet that paid out received nothing");
   ok((await bal(poolAt)) === 0n, "pool empty after payout");
   ok((await bal(sam)) === U(1100), "Sam holds $11.00 in total ($5 named + $6 team)");
+  ok((await pool.pendingTips()) === 0n, "no team tips waiting after the payout");
+
+  // After the payout, the business can change its split
+  const changed = await pool.connect(business).configure(70, 30, 0, ["Sam", "Ama", "Kai"], [sam, ama, kai], [0, 1, 2]);
+  await changed.wait();
+  console.log("\nTX_RECONFIGURE", changed.hash);
+  ok([...(await pool.currentPolicy())].join("/") === "70/30/0", "after the payout, the split changed to 70/30/0");
 
   // 5. Send $100 to three people
   const amounts = [U(3334), U(3333), U(3333)];
