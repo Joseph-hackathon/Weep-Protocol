@@ -34,6 +34,7 @@ export default function Page() {
               <tr><th scope="col">Information</th><th scope="col">Where it comes from</th><th scope="col">Why</th><th scope="col">Who else sees it</th></tr>
             </thead>
             <tbody>
+              <tr><th scope="row">Your passkey, if you use one</th><td data-label="Where it comes from">Your device, when you create a passkey</td><td data-label="Why">To sign you in. Your fingerprint, face or screen lock never leaves your device; only the passkey&apos;s public key is stored</td><td data-label="Who else sees it">Privy</td></tr>
               <tr><th scope="row">Your email address</th><td data-label="Where it comes from">You, when you sign in with email</td><td data-label="Why">To send your one-time code and link you to your wallet</td><td data-label="Who else sees it">Privy</td></tr>
               <tr><th scope="row">Your wallet address</th><td data-label="Where it comes from">Your wallet, or the one Privy made for you</td><td data-label="Why">To show your balance and send payments you approve</td><td data-label="Who else sees it">Public on Monad</td></tr>
               <tr><th scope="row">Emails of people you pay</th><td data-label="Where it comes from">You, in Send</td><td data-label="Why">To find, or have Privy create, each person&apos;s wallet</td><td data-label="Who else sees it">Privy</td></tr>
@@ -92,7 +93,7 @@ export default function Page() {
       <Part id="sharing" title="Who else processes data">
         <p>We share information only with the services that make Weep work, and only for that purpose. Each processes it under its own policy.</p>
         <ul>
-          <li><strong>Privy</strong>: sign-in by email code, wallets for email users, and the email-to-wallet lookup. <a href="https://www.privy.io/privacy-policy" target="_blank" rel="noreferrer">Privy privacy policy</a>.</li>
+          <li><strong>Privy</strong>: sign-in by email code or passkey, wallets for those accounts, and the email-to-wallet lookup. <a href="https://www.privy.io/privacy-policy" target="_blank" rel="noreferrer">Privy privacy policy</a>.</li>
           <li><strong>Google</strong>: reads payment and team descriptions through the Gemini API. <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Google privacy policy</a>.</li>
           <li><strong>Chainlink</strong>: runs Weep&apos;s CRE workflow, which reads a team description when a business uses it. <a href="https://chain.link/privacy-policy" target="_blank" rel="noreferrer">Chainlink privacy policy</a>.</li>
           <li><strong>Vercel</strong>: hosts the website and our server code. <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noreferrer">Vercel privacy policy</a>.</li>

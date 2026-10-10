@@ -134,7 +134,7 @@ export default function Page() {
           <li><strong>Testnet only.</strong> Test dollars, and the fees paid in them, have no value. The network can be slow, reset or unavailable, and Weep&apos;s contracts may be replaced by new versions.</li>
           <li><strong>Not audited.</strong> The contracts are tested but haven&apos;t been reviewed by an independent auditor.</li>
           <li><strong>Wrong address, wrong person.</strong> Money sent to a mistyped wallet or email goes to that wallet or email.</li>
-          <li><strong>Network fees.</strong> Each transaction needs a little MON. Weep covers the first fees of email sign-ins; a wallet you connect yourself gets MON free from the <a href="https://faucet.monad.xyz" target="_blank" rel="noreferrer">Monad faucet</a>.</li>
+          <li><strong>Network fees.</strong> Each transaction needs a little MON. Weep covers the first fees of a new account made with email or a passkey; a wallet you connect yourself gets MON free from the <a href="https://faucet.monad.xyz" target="_blank" rel="noreferrer">Monad faucet</a>.</li>
           <li><strong>Recent activity only in the app.</strong> My money and the Employee Dashboard show payments they see arrive while open, plus what they remember on your device. The full history of any wallet is always on the <a href={EXPLORER} target="_blank" rel="noreferrer">Monad testnet explorer</a>.</li>
           <li><strong>Services can fail.</strong> If Privy, the Gemini API or the Monad endpoint is down, signing in, reading descriptions or sending may not work until it&apos;s back. A payment either confirms in full or doesn&apos;t happen at all.</li>
         </ul>

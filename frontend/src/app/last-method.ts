@@ -7,7 +7,8 @@
 export type LastMethod =
   | { type: "email"; email: string }
   | { type: "wallet"; rdns: string; name: string }
-  | { type: "all" };
+  | { type: "all" }
+  | { type: "passkey" };
 
 const KEY = "weep.lastMethod";
 
