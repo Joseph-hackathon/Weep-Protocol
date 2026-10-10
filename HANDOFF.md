@@ -41,24 +41,25 @@ Optional:
 | WeepPolicyRegistry | `0x6437a6BD79d388E70f726Fee9f15f3d0245ddc9c`: Chainlink CRE's records of team setups, verified. Trusts Chainlink's simulation forwarder |
 | Retired | Shared pool `0x06db…EA35`: empty, unlinked. First pool `0x1A24…F336`: unlinked; $8 left (optional step above) |
 
-## Evidence, 9 Oct 2026
+## Evidence
 
-- **Live loop on the live contracts:** 19 of 19 balance checks passed, run by [`contracts/scripts/live-loop.js`](contracts/scripts/live-loop.js) with fresh test wallets. I also read every transaction back independently from Monad.
+- **Live loop on the live contracts (10 Oct, after the pending-tips fix):** 22 of 22 checks passed, run by [`contracts/scripts/live-loop.js`](contracts/scripts/live-loop.js) with fresh test wallets. I also read every transaction back independently from Monad.
 
   | Step | Transaction | Result |
   |---|---|---|
-  | Create a pool | [tx](https://testnet.monadexplorer.com/tx/0x61f67c67a6df32c23a5f4d9c6108873e872256a7538317173c68aebeced656d3) | Sam floor, Ama kitchen, Kai bar; split 60/30/10 |
-  | Named tip | [tx](https://testnet.monadexplorer.com/tx/0xe234cff970cf264928ee4b3d0d59e7d579acfc1a8aa7cc08ee92439d7c6f0190) | Sam got $5.00, Weep got $0.025, the pool kept $0 |
-  | Team tip | [tx](https://testnet.monadexplorer.com/tx/0xc3fe16a8ecd0b4a0960169a54333a84ca8ab49027736b61b2eda5501022647f1) | The pool got $10.00, Weep got $0.05 |
-  | Payout by a different wallet | [tx](https://testnet.monadexplorer.com/tx/0x90111369274b6e5cf02b7610707ed9b6c159da3921dcb72411f270d39a0eca99) | Sam $6.00, Ama $3.00, Kai $1.00; the caller got $0; the pool ended empty |
-  | Send $100 | [tx](https://testnet.monadexplorer.com/tx/0x6f4558cbc4837385f5d5b198cdf2059d571d223fb382d014ab9159786b71b3c0) | $33.34 / $33.33 / $33.33 delivered, $0.30 fee, WeepPay kept $0 |
+  | Create a pool | [tx](https://testnet.monadexplorer.com/tx/0x81b16bad814a69229a117701833ed807c3f15afe92893f68fa124733bbb7bb80) | Sam floor, Ama kitchen, Kai bar; split 60/30/10 |
+  | Named tip | [tx](https://testnet.monadexplorer.com/tx/0x455bfd38ae5cb36800e838b40de17e9377c9ac91ebc7bed9c6a3c6724c3ff62e) | Sam got $5.00, Weep got $0.025, the pool kept $0 |
+  | Team tip | [tx](https://testnet.monadexplorer.com/tx/0xb29eceeaf16841217df57f7a6e623e97ae0ca2db58fc8108d96fa5f91f02c019) | The pool got $10.00, Weep got $0.05. The pool records $10.00 waiting, and the business's attempt to change the split is refused ("Pay out pending tips first") |
+  | Payout by a different wallet | [tx](https://testnet.monadexplorer.com/tx/0x855a78d325b2b5fe465289c00b45b47ce6fbc4aa7e210cd602e456e8829a145f) | Sam $6.00, Ama $3.00, Kai $1.00; the caller got $0; the pool ended empty, with nothing waiting |
+  | Split changed after the payout | [tx](https://testnet.monadexplorer.com/tx/0x9f7bb230715fc3fdc2fa570f3ce7cb20433958e9dd3e3d61c250692d8becbe65) | 70/30/0, accepted once nothing was waiting |
+  | Send $100 | [tx](https://testnet.monadexplorer.com/tx/0x8c394a284864189528df4547f8c1680761f3f5d981139c2d2c4e749fe4975d98) | $33.34 / $33.33 / $33.33 delivered, $0.30 fee, WeepPay kept $0 |
 
 - **Chainlink CRE:** `cre workflow simulate --broadcast` on CRE CLI v1.38 read the example description with Gemini in about 2 seconds, then wrote a DON-signed report through Chainlink's forwarder: [transaction](https://testnet.monadexplorer.com/tx/0x3803dec912c6d9d4af4776f252f40cb0d712e87bde554e29f3c3f3adf9f77ac3). We read it back from Monad: Sam and Ama (floor), Kai (kitchen), 70/30/0, no emails. On a local chain, the Merchant Portal showed the CRE line only when the review matched the record, and hid it after any edit (checked at 390 and 320 px).
 - **A brand-new email user, live:** someone who had never used Weep signed in with email only and sent $6.00 to two people by email. Weep's sponsor wallet covered their first network fee (0.1 test MON; its first transaction), the app added test dollars, and [one payment](https://testnet.monadexplorer.com/tx/0x60c358e7ce571c7b689c615b6c87c089d51cdcf8df28f8c09bdbaa6078ff270d) delivered $3.00 and $3.00 with a $0.018 fee, WeepPay keeping $0. Checked on Monad.
-- **Live website, read-only:** the tip page for that pool lists Sam, Ama and Kai and shows "+ $0.025 Weep fee (0.5%) · Sam gets 100%" before signing. Sam's Employee Dashboard shows $11.00.
+- **Live website, read-only (10 Oct):** the tip page for that pool lists Everyone, Sam, Ama and Kai, and shows "+ $0.01 Weep fee (0.5%) · Sam gets 100%" before signing a $2 tip. Sam's Employee Dashboard shows $11.00.
 - **AI on the live site:** 14 of 14 messy descriptions read correctly one at a time, and 14 of 14 answered when all were sent at once. Before the retry fix, 3 failed when sent at once. Each answer took 4–30 seconds.
 - **Benchmarks:** see [docs/benchmarks.md](docs/benchmarks.md). A payout to 100 people is 3.6M gas (about 2.4% of a block) and costs about 0.37–0.46 test MON. Every transaction confirmed 1.9–2.6 seconds after submitting.
-- **Tests:** 36 contract tests (30 earlier ones covered 100% of lines and functions and 90.91% of branches; 6 new ones cover WeepPolicyRegistry), plus 7 tests for the CRE workflow's checks. Plus 7 app tests, including 5,000 random payment plans. Typecheck, lint and the production build are clean.
+- **Tests:** 39 contract tests, covering 100% of lines and functions and 92.98% of branches. They include 6 for WeepPolicyRegistry and 5 for the pending-tips rule. Plus 7 tests for the CRE workflow's checks. Plus 7 app tests, including 5,000 random payment plans. Typecheck, lint and the production build are clean.
 - **Phones:** checked at 375px wide on the live site: the landing page, Merchant Portal, tip card, Send and How money moves, all with no sideways scroll.
 
 ## Score against the 100-point audit
@@ -68,7 +69,7 @@ Scored honestly, with evidence for each line. Each dimension is scored 0–4, an
 | Dimension | Weight | Score | Points | Evidence | What would raise it |
 |---|---|---|---|---|---|
 | Problem, differentiation, positioning | 15 | 4 | 15 | Sourced problem (Pew, URocked), one concrete scenario, before/after table, honest alternatives, a business model with fixed fees | — |
-| Working end-to-end product | 25 | 3.5 | 21.9 | Live contracts; the full loop with 19 exact checks; the real pages show the pool, the fee and the dashboard | The loop ran by script with test wallets, not by a human signing in with email on the live site |
+| Working end-to-end product | 25 | 3.5 | 21.9 | Live contracts; the full loop with 22 exact checks, including the pending-tips rule; the real pages show the pool, the fee and the dashboard | The loop ran by script with test wallets, not by a human signing in with email on the live site |
 | Necessity and proof of Monad use | 15 | 3 | 11.3 | One-transaction payouts to 100 people at 2.4% of a block; about 2 s to confirmation; verified source | A head-to-head comparison with another chain |
 | Security, trust, failure handling | 20 | 3.5 | 17.5 | Fees fixed in code; reviewed fee and wallet checks; re-entrancy guards; no owner on the payment contracts; tested failure paths; failure table in the docs | An independent audit |
 | First-time user experience | 10 | 3.5 | 8.8 | Email sign-in, first fee covered, exact review, fee shown before signing | AI answers take up to 30 s |
@@ -78,7 +79,7 @@ Scored honestly, with evidence for each line. Each dimension is scored 0–4, an
 
 ## Honest gaps
 
-- **Not audited.** The contracts are tested (30 tests, 100% of lines) but haven't been independently audited. It's a testnet preview, and the test dollars and fees have no value.
+- **Not audited.** The contracts are tested (39 tests, 100% of lines) but haven't been independently audited. It's a testnet preview, and the test dollars and fees have no value.
 - **No real pilot yet.** No venue or community has used Weep. The pilots in the README are plans.
 - **CRE runs as a simulation.** The workflow runs through Chainlink's official CLI and writes real transactions to Monad testnet, but it isn't deployed to the Chainlink network itself. That needs Chainlink to approve deploy access (`cre account access`). The live site doesn't trigger it yet; it reads the records.
 - **Recent payments list.** The dashboards list only payments from about the last 100 blocks; older ones show in the balance.
