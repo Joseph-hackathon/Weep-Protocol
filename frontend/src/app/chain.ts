@@ -129,13 +129,16 @@ export const tipTeamData = (units: bigint, fee: bigint) => (SEL.tipTeam + word(u
 export const payoutData = SEL.payoutTeam as `0x${string}`;
 export const mintData = (to: string, units: bigint) => (SEL.mint + word(to) + word(units.toString(16))) as `0x${string}`;
 
-/** Wait until a transaction is included; resolves true on success, false on revert. */
+/**
+ * Wait until a transaction is included; resolves true on success, false on revert. Monad confirms in under a
+ * second, so it checks every 150 ms for the first 8 s (each step moves on the moment it's confirmed), then every 600 ms.
+ */
 export async function waitForReceipt(hash: string, timeoutMs = 90000) {
-  const end = Date.now() + timeoutMs;
+  const start = Date.now(), end = start + timeoutMs;
   while (Date.now() < end) {
     const r = await rpc<{ status: string } | null>("eth_getTransactionReceipt", [hash]).catch(() => null);
     if (r) return r.status === "0x1";
-    await new Promise((res) => setTimeout(res, 600));
+    await new Promise((res) => setTimeout(res, Date.now() - start < 8000 ? 150 : 600));
   }
   throw new Error("Still waiting for the network. Check the explorer in a moment.");
 }

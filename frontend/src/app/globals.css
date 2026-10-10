@@ -920,9 +920,20 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
 /* A thin line along the bottom of the button fills as the payment moves forward. */
 .pay-send-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; transform-origin: left center; background: var(--pay-lime); box-shadow: none; }
 /* While working: three calm dots after the label. */
-.pay-ellipsis { display: inline-block; width: 1.2em; text-align: left; }
-.pay-ellipsis::after { content: ""; animation: pay-dots 1.2s steps(4, end) infinite; }
-@keyframes pay-dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75%, 100% { content: "..."; } }
+/* Working: three dots that bounce in turn, in the button's own text colour, right after its label. */
+.pay-ellipsis {
+  display: inline-block; flex: none; width: 20px; aspect-ratio: 2; margin-left: var(--space-2); vertical-align: middle;
+  --_g: no-repeat radial-gradient(circle closest-side, currentColor 90%, #0000);
+  background: var(--_g) 0% 50%, var(--_g) 50% 50%, var(--_g) 100% 50%;
+  background-size: calc(100% / 3) 50%;
+  animation: pay-loader 1s infinite linear;
+}
+@keyframes pay-loader {
+  20% { background-position: 0% 0%, 50% 50%, 100% 50%; }
+  40% { background-position: 0% 100%, 50% 0%, 100% 50%; }
+  60% { background-position: 0% 50%, 50% 100%, 100% 0%; }
+  80% { background-position: 0% 50%, 50% 50%, 100% 100%; }
+}
 .pay-send-progress { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
 .pay-send.is-busy .pay-send-progress {
   opacity: 1; width: 40%;
@@ -976,8 +987,7 @@ html[data-settle="true"] .flower::before { opacity: 1; scale: 1.04; }
 .pay-details-short { display: none; }
 @media (max-width: 359px) { .pay-details-short { display: inline; } }
 @media (prefers-reduced-motion: reduce) {
-  .pay-live, .pay-send.is-busy .pay-send-progress, .pay-ellipsis::after { animation: none; }
-  .pay-ellipsis::after { content: "..."; }
+  .pay-live, .pay-send.is-busy .pay-send-progress, .pay-ellipsis { animation: none; }
   .pay-amount, .pay-key, .pay-send { transition: none; }
 }
 

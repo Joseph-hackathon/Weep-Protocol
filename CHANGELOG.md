@@ -9,6 +9,7 @@ User-visible changes to Weep, newest first. Everything below was built during Mo
 - The Privacy notice says what a passkey shares: only its public key, never your fingerprint or face.
 
 ### Changed
+- **Faster, smoother sending.** While a payment, tip, save or payout is working, the button shows three dots bouncing in turn, instead of dots that jump. Each step now moves on as soon as Monad confirms: Weep checks every 0.15 s instead of every 0.6 s. A first payment (test dollars, allow, pay) finished in about 3 seconds on a local chain with Monad-like blocks.
 - **No glows.** The coloured glow around buttons, dots, photos, the sign-in window and the Monad logo is gone, along with the background light, the halo behind the landing photos and the grid behind the chooser. The Connect button keeps its look. Colours, layout and wording are unchanged.
 
 ## 2026-10-09: waiting tips keep their rules
