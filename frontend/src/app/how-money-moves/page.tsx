@@ -21,7 +21,7 @@ export default function Page() {
     <DocPage
       path="/how-money-moves"
       title="How money moves"
-      lead="What happens to your money on Weep, step by step, and what the code guarantees, so you can trust a payment without having to trust us."
+      lead="What happens to your money on Weep, step by step, and what the code guarantees, so you can check every payment yourself."
       glance={[
         { title: "Your money goes straight to each person.", text: "From your wallet to theirs, in one step." },
         { title: "Exact to the cent.", text: "Code works out every share, and you approve it." },
@@ -51,7 +51,7 @@ export default function Page() {
           <li>Whatever&apos;s left is split equally among everyone on an equal share.</li>
           <li>Any leftover cents go one at a time to the first people on the list, and the review shows who got one.</li>
         </ol>
-        <p>So $100 split three ways is $33.34, $33.33 and $33.33. The shares always add up to exactly the total. Nothing is rounded away. The rules are in <a href={`${SRC}/frontend/src/app/allocate.ts`} target="_blank" rel="noreferrer">allocate.ts</a>.</p>
+        <p>So $100 split three ways is $33.34, $33.33 and $33.33. The shares always add up to exactly the total, every cent accounted for. The rules are in <a href={`${SRC}/frontend/src/app/allocate.ts`} target="_blank" rel="noreferrer">allocate.ts</a>.</p>
       </Part>
 
       <Part id="fee" title="Weep's fee">
@@ -70,12 +70,12 @@ export default function Page() {
             <thead><tr><th scope="col">Guarantee</th><th scope="col">How</th></tr></thead>
             <tbody>
               <tr><th scope="row">Everyone is paid together</th><td data-label="How">All transfers land in one step, or the whole payment stays with you.</td></tr>
-              <tr><th scope="row">The fee is the one you saw</th><td data-label="How">The contract works out the fee itself and refuses the payment if it differs from the fee you reviewed. Its rate can&apos;t change.</td></tr>
-              <tr><th scope="row">The parts must equal the total you reviewed</th><td data-label="How">The contract adds up every amount and refuses the payment if the sum differs from the total you signed.</td></tr>
+              <tr><th scope="row">The fee is the one you saw</th><td data-label="How">The contract works out the fee itself and matches it to the fee you reviewed. Its rate is fixed.</td></tr>
+              <tr><th scope="row">The parts equal the total you reviewed</th><td data-label="How">The contract adds up every amount and confirms the sum equals the total you signed.</td></tr>
               <tr><th scope="row">Only your own money moves</th><td data-label="How">It can only spend what your wallet allowed. Weep allows exactly the reviewed total.</td></tr>
               <tr><th scope="row">Straight to each person</th><td data-label="How">Money passes directly from you to each person, so the contract&apos;s balance stays at zero.</td></tr>
               <tr><th scope="row">Ownerless</th><td data-label="How">WeepPay runs on its own code alone, open for anyone to read.</td></tr>
-              <tr><th scope="row">No empty or broken payments</th><td data-label="How">Zero amounts, missing wallets and more than 100 people are refused.</td></tr>
+              <tr><th scope="row">Every payment is complete</th><td data-label="How">Every person has a wallet and an amount, for up to 100 people.</td></tr>
             </tbody>
           </table>
         </div>
@@ -89,7 +89,7 @@ export default function Page() {
 
       <Part id="tips" title="Tips and business pools">
         <ul>
-          <li><strong>Every business has its own pool.</strong> Setting up a team in the Merchant Portal creates the business&apos;s own pool on Monad in one confirmation, owned by its wallet. Its table code opens that pool and no other, and Weep confirms the code leads to a real Weep pool before anyone sends.</li>
+          <li><strong>Every business has its own pool.</strong> Setting up a team in the Merchant Portal creates the business&apos;s own pool on Monad in one confirmation, owned by its wallet. Its table code opens exactly that pool, and Weep confirms the code leads to a real Weep pool before anyone sends.</li>
           <li><strong>Tip a person by name.</strong> The tip goes straight from the guest to that person&apos;s wallet, 100%, through the pool&apos;s <code>tipIndividual</code>, with the 0.5% fee on top. It goes directly to them. The tip carries the wallet the guest saw for that name, so it always reaches the person the guest chose.</li>
           <li><strong>Tip the whole team.</strong> The tip goes into the business&apos;s pool through <code>tipTeam</code>, 100%, with the fee on top, and waits there until it&apos;s paid out. The payout splits it between groups (floor, kitchen, bar) by the business&apos;s rule, and evenly within each group. An empty group passes its share to the others. A remainder smaller than a cent can stay in the pool, and it goes out with the next payout.</li>
           <li><strong>Anyone can pay out.</strong> Staff get paid on their own schedule: anyone can pay a pool out, from the table code&apos;s <em>Split details</em>. The money always goes to the saved team, by the saved split.</li>
@@ -104,11 +104,11 @@ export default function Page() {
         <ul>
           <li><strong>It reads.</strong> It finds people, emails, wallets, the total, and whether each share is a fixed amount, a percentage or an equal share.</li>
           <li><strong>It doesn&apos;t calculate.</strong> Weep&apos;s own code works out every cent, as described above.</li>
-          <li><strong>It doesn&apos;t send.</strong> Nothing moves until you review the list and approve the payment in your wallet.</li>
+          <li><strong>You send.</strong> Money moves when you review the list and approve the payment in your wallet.</li>
           <li><strong>It asks rather than guesses.</strong> If the total is missing, a person is unclear, or the amounts can&apos;t add up, it asks you a question.</li>
-          <li><strong>It doesn&apos;t make people up.</strong> If you say &ldquo;20 winners&rdquo; without naming them, it creates numbered rows and asks how to reach each person.</li>
+          <li><strong>It asks when it needs to.</strong> If you say &ldquo;20 winners&rdquo;, it creates numbered rows and asks how to reach each person.</li>
         </ul>
-        <p>On 9 October 2026 we tried 14 very different descriptions on the live site. They included a long paragraph with the amounts buried inside, &ldquo;2k&rdquo; and &ldquo;1.5k&rdquo;, &ldquo;fifty bucks&rdquo;, &ldquo;USD 1,250.75&rdquo;, fractions and percentages, emails only, raw wallet addresses, a misspelled name, 20 unnamed winners, a request with no total, and amounts that don&apos;t add up. Sent one at a time, all 14 were read correctly. For the last two it asked a question instead of guessing. Sent all at once, all 14 were answered. Each answer took between 4 and 30 seconds. You review every amount before sending, so you always have the final say.</p>
+        <p>On 9 October 2026 we tried 14 very different descriptions on the live site. They included a long paragraph with the amounts buried inside, &ldquo;2k&rdquo; and &ldquo;1.5k&rdquo;, &ldquo;fifty bucks&rdquo;, &ldquo;USD 1,250.75&rdquo;, fractions and percentages, emails only, raw wallet addresses, a misspelled name, 20 unnamed winners, a request missing its total, and amounts that needed checking. Sent one at a time, all 14 were read correctly. For the last two it asked a question instead of guessing. Sent all at once, all 14 were answered. Each answer took between 4 and 30 seconds. You review every amount before sending, so you always have the final say.</p>
       </Part>
 
       <Part id="proof" title="Check it yourself">

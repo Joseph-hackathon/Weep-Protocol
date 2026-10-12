@@ -72,4 +72,4 @@ The simulation runs on your computer. The Gemini call is real, and the transacti
 | Simulation (`--broadcast`) | `0xB9F79d863261869B234c481D1f9A7af84AeAd192` (MockKeystoneForwarder) |
 | Deployed workflows | `0xF8344CFd5c43616a4366C34E3EEE75af79a74482` (KeystoneForwarder) |
 
-Deploy the registry for either with [`contracts/scripts/deploy-policy-registry.js`](../contracts/scripts/deploy-policy-registry.js). Without `FORWARDER` set, it uses the simulation one.
+Deploy the registry for either with [`contracts/scripts/deploy-policy-registry.js`](../contracts/scripts/deploy-policy-registry.js). By default it uses the simulation forwarder; set `FORWARDER` for the production one.
