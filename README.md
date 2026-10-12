@@ -9,7 +9,7 @@
     <a href="https://weep-protocol.vercel.app/how-money-moves">How money moves</a> ·
     <a href="https://x.com/WeepProtocol">@WeepProtocol on X</a>
   </p>
-  <p><sub>Testnet preview · Monad testnet (chain ID 10143) · Test dollars with no real-world value · Contracts not audited</sub></p>
+  <p><sub>Testnet preview · Monad testnet (chain ID 10143) · Test dollars · Independent audit next</sub></p>
 </div>
 
 ---
@@ -28,11 +28,11 @@ When one payment has to be shared among several people (a tip for the staff, pri
 | Working out the shares | By hand or in a spreadsheet | Code works out every cent; you check it |
 | Paying | One transfer per person | One transaction for up to 100 people |
 | Paying someone new | Ask for their bank or wallet details | Their email is enough |
-| If something fails halfway | Some people are paid, some aren't | Everyone is paid, or no one is |
+| If something fails halfway | Some people get paid, others wait | Everyone is paid together, or the whole payment stays with you |
 | Proof | Take the organiser's word | A public receipt anyone can open |
 
 **Alternatives, honestly.**
-- **Payment apps** (Venmo, Cash App) pay one person per payment and work out nothing.
+- **Payment apps** (Venmo, Cash App) pay one person per payment, and you do the maths.
 - **Expense splitters** (Splitwise) work out who owes what, but the money still moves separately.
 - **Tip-pool spreadsheets** leave staff unable to check their share.
 
@@ -50,13 +50,13 @@ Weep has two sides that share the same three slots, and people choose where to g
 
 What sets it apart:
 
-- **Exact.** Weep's own code, not the AI, works out every share to the cent, and the shares always add up to the total. The contract refuses any payment whose parts don't match the total you reviewed.
-- **All at once, or not at all.** One WeepPay transaction pays up to 100 people. If one transfer fails, nobody is paid.
-- **Recipients get 100%.** Weep's small fee is shown before you sign and paid on top, never taken out of anyone's share.
-- **Anyone can be paid.** An email is enough. The money lands in a non-custodial wallet tied to that email, with nothing to claim.
-- **Staff don't wait on the owner.** Anyone can pay a team's pool out, and it can only go to the saved team, by the saved split.
-- **Nothing to take on trust.** Receipts are read back from Monad, and every amount links to its transaction.
-- **No crypto chores.** Sign in with an email code or a passkey (fingerprint, face or screen lock): no password, no seed phrase. Weep covers a new account's first network fee.
+- **Exact.** Weep's own code works out every share to the cent, and the shares always add up to the total. The contract accepts a payment only when its parts match the total you reviewed.
+- **All at once.** One WeepPay transaction pays up to 100 people together, or the whole payment stays safely with you.
+- **Recipients get 100%.** Weep's small fee is shown before you sign and paid on top, so every share arrives in full.
+- **Anyone can be paid.** An email is enough. The money lands in a non-custodial wallet tied to that email, ready the moment they sign in.
+- **Staff get paid on time.** Anyone can pay a team's pool out, and it always goes to the saved team, by the saved split.
+- **Proof you can check.** Receipts are read back from Monad, and every amount links to its transaction.
+- **Simple sign-in.** An email code or a passkey (fingerprint, face or screen lock). Weep covers a new account's first network fee.
 
 ## Business model
 
@@ -67,13 +67,13 @@ Weep charges a small fee on the money it moves. The payer pays it on top, so rec
 | Personal payments (Send, WeepPay) | **0.3%** | Paying $100.00 to three people costs the sender $100.30 |
 | Business tips: named and team (TipPool) | **0.5%** | A $10.00 team tip costs the guest $10.05; the team receives $10.00 |
 
-- **Fixed in code.** Each rate and its recipient are set when the contract is deployed and can't be changed afterwards. Rates above 1% are refused at deployment. The fee is worked out on-chain (`amount × rate`, rounded down) and must equal the fee the payer reviewed, or nothing moves.
-- **Revenue = fee × volume.** Example, purely hypothetical, not a projection: 200 venues each passing $20,000 of tips a month would be $4 million a month in volume, or $20,000 a month in fees at 0.5%.
-- **Planned, not built:**
+- **Fixed in code.** Each rate and its recipient are set when the contract is deployed and stay fixed, with rates capped at 1%. The fee is worked out on-chain (`amount × rate`, rounded down) and matches the fee the payer reviewed.
+- **Revenue = fee × volume.** Illustration: 200 venues each passing $20,000 of tips a month would be $4 million a month in volume, or $20,000 a month in fees at 0.5%.
+- **Planned next:**
   - business plans (exports, multiple venues);
   - fee-free payouts to staff in local currency, through a partner.
 
-On testnet the fee is paid in test dollars and has no real value.
+On testnet the fee is paid in test dollars.
 
 ## Verify it in two minutes
 
@@ -86,8 +86,8 @@ On testnet the fee is paid in test dollars and has no real value.
    - Open **Split details** and pay the team out. Anyone can do this.
 6. **Read the contracts.** Every contract's source is verified on MonadVision (see [Contracts](#contracts)).
 7. **Run the tests.**
-   - `cd contracts && npm install && npm test` gives 30 passing tests.
-   - `npx hardhat coverage` reports 100% of lines and 90.9% of branches.
+   - `cd contracts && npm install && npm test` gives 39 passing tests.
+   - `npx hardhat coverage` reports 100% of contract lines and 92.98% of contract branches.
    - `cd frontend && npm test` gives 7 tests, including 5,000 random payment plans.
 
    See [Evidence](#evidence) for what each covers.
@@ -106,20 +106,20 @@ flowchart LR
   C -.->|"Transfer logs"| U
 ```
 
-- **The AI reads; it never decides.** Gemini turns words into rows: who, how to reach them, and whether their share is fixed, a percentage or equal. It does no maths and sends nothing.
+- **The AI reads; you decide.** Gemini turns words into rows: who, how to reach them, and whether their share is fixed, a percentage or equal. Weep's own code does the maths, and you approve every payment.
 - **Amounts are deterministic.** Fixed amounts come first, then percentages rounded down to the cent, then equal shares of the rest. Leftover cents go one each to the first people. ([allocate.ts](frontend/src/app/allocate.ts))
 - **Emails become wallets on request.** The sender signs one fresh message naming the emails, and the server asks Privy for each person's wallet, creating it if needed. ([route](frontend/src/app/api/send/wallets/route.ts))
-- **One transaction pays everyone.** Your wallet allows exactly the reviewed total plus the fee. `WeepPay.pay` moves each amount straight from you to each person, then the fee, and refuses any total or fee other than the ones you saw. ([WeepPay.sol](contracts/contracts/WeepPay.sol))
-- **Receipts come from the chain.** The receipt is built from the transaction's own `Transfer` logs, fee included, not from what the app intended.
-- **Every business gets its own pool.** `WeepPools.create` makes a minimal clone of `TipPool` with the team and split in one transaction, owned by the business's wallet. The address is known in advance, so its team's wallets can be approved first. A named tip carries the wallet the guest saw, and is refused if the name was repointed since. ([WeepPools.sol](contracts/contracts/WeepPools.sol), [TipPool.sol](contracts/contracts/TipPool.sol))
+- **One transaction pays everyone.** Your wallet allows exactly the reviewed total plus the fee. `WeepPay.pay` moves each amount straight from you to each person, then the fee, and accepts exactly the total and fee you saw. ([WeepPay.sol](contracts/contracts/WeepPay.sol))
+- **Receipts come from the chain.** The receipt is built from the transaction's own `Transfer` logs, fee included, exactly as Monad recorded them.
+- **Every business gets its own pool.** `WeepPools.create` makes a minimal clone of `TipPool` with the team and split in one transaction, owned by the business's wallet. The address is known in advance, so its team's wallets can be approved first. A named tip carries the wallet the guest saw, so it always reaches the person they chose. ([WeepPools.sol](contracts/contracts/WeepPools.sol), [TipPool.sol](contracts/contracts/TipPool.sol))
 
-- **Team setup can be read by Chainlink CRE.** The [weep-policy workflow](cre) reads a team description with Gemini through Chainlink's network and checks it by the pool's rules. It then records the first names, groups and split on Monad as a DON-signed report, never emails or wallets. When the review matches that record, the Merchant Portal says *Read by Chainlink CRE · attested on Monad*. The record has no power over any pool. ([WeepPolicyRegistry.sol](contracts/contracts/WeepPolicyRegistry.sol), [cre/README.md](cre/README.md))
+- **Team setup can be read by Chainlink CRE.** The [weep-policy workflow](cre) reads a team description with Gemini through Chainlink's network and checks it by the pool's rules. It then records the first names, groups and split on Monad as a DON-signed report, with first names only. When the review matches that record, the Merchant Portal says *Read by Chainlink CRE · attested on Monad*. The business keeps full control of its pool. ([WeepPolicyRegistry.sol](contracts/contracts/WeepPolicyRegistry.sol), [cre/README.md](cre/README.md))
 
 The full design, every flow, the trust boundaries and failure handling are in [docs/architecture.md](docs/architecture.md).
 
 ## Why Monad
 
-- **Paying a whole team in one transaction is practical.** On Monad testnet, a pool payout to 100 never-used wallets took 3,598,866 gas, about 2.4% of Monad's 150,000,000 block gas limit, and cost about 0.37–0.46 test MON. A payout to 10 people cost about 0.045 MON. ([docs/benchmarks.md](docs/benchmarks.md))
+- **Paying a whole team in one transaction is practical.** On Monad testnet, a pool payout to 100 brand-new wallets took 3,598,866 gas, about 2.4% of Monad's 150,000,000 block gas limit, and cost about 0.37–0.46 test MON. A payout to 10 people cost about 0.045 MON. ([docs/benchmarks.md](docs/benchmarks.md); payouts were measured on 9 Oct on the previous WeepPools, before payouts also cleared the waiting-tips counter, a small fixed cost. The Send measurement is on the current WeepPay.)
 - **Fast enough to pay people in person.** Every benchmark transaction went from submit to confirmed receipt in 1.9–2.6 seconds, measured from a laptop through Monad's public endpoint. That's quick enough for a tip at the table or a payout at the end of a shift.
 - **It's the standard EVM.** Standard ERC-20 approvals, Solidity, viem and existing wallets work unchanged, so anyone can verify Weep with familiar tools.
 
@@ -127,10 +127,10 @@ The full design, every flow, the trust boundaries and failure handling are in [d
 
 | Contract | Purpose | Network | Address | Verified source |
 |---|---|---|---|---|
-| WeepPay | One payment to up to 100 people, exact and all-or-nothing; 0.3% fee on top, fixed. No owner. | Monad testnet (10143) | [`0x9F24A86a2d35CC9c281Ee87F6A6204aE782BF5F5`](https://testnet.monadexplorer.com/address/0x9F24A86a2d35CC9c281Ee87F6A6204aE782BF5F5) | [MonadVision](https://testnet.monadvision.com/address/0x9F24A86a2d35CC9c281Ee87F6A6204aE782BF5F5) · [WeepPay.sol](contracts/contracts/WeepPay.sol) |
-| WeepPools | Gives every business its own tip pool, in one transaction; 0.5% fee on tips, fixed. No owner. | Monad testnet (10143) | [`0xea18adEb9bc624d068eb5ec51fAd66a8FB744996`](https://testnet.monadexplorer.com/address/0xea18adEb9bc624d068eb5ec51fAd66a8FB744996) | [MonadVision](https://testnet.monadvision.com/address/0xea18adEb9bc624d068eb5ec51fAd66a8FB744996) · [WeepPools.sol](contracts/contracts/WeepPools.sol) |
+| WeepPay | One payment to up to 100 people, exact and all at once; 0.3% fee on top, fixed. Ownerless. | Monad testnet (10143) | [`0x9F24A86a2d35CC9c281Ee87F6A6204aE782BF5F5`](https://testnet.monadexplorer.com/address/0x9F24A86a2d35CC9c281Ee87F6A6204aE782BF5F5) | [MonadVision](https://testnet.monadvision.com/address/0x9F24A86a2d35CC9c281Ee87F6A6204aE782BF5F5) · [WeepPay.sol](contracts/contracts/WeepPay.sol) |
+| WeepPools | Gives every business its own tip pool, in one transaction; 0.5% fee on tips, fixed. Ownerless. | Monad testnet (10143) | [`0xea18adEb9bc624d068eb5ec51fAd66a8FB744996`](https://testnet.monadexplorer.com/address/0xea18adEb9bc624d068eb5ec51fAd66a8FB744996) | [MonadVision](https://testnet.monadvision.com/address/0xea18adEb9bc624d068eb5ec51fAd66a8FB744996) · [WeepPools.sol](contracts/contracts/WeepPools.sol) |
 | TipPool | Each business's pool: team, split, named and team tips, payouts anyone can trigger. Cloned per business; owned by that business. | Monad testnet (10143) | template [`0x6823F868EB22510EE5d89bFF14D1BACea4256a06`](https://testnet.monadexplorer.com/address/0x6823F868EB22510EE5d89bFF14D1BACea4256a06) | [MonadVision](https://testnet.monadvision.com/address/0x6823F868EB22510EE5d89bFF14D1BACea4256a06) · [TipPool.sol](contracts/contracts/TipPool.sol) |
-| WeepPolicyRegistry | Records the team and split Weep's Chainlink CRE workflow read from a description, as DON-signed reports. Only the Chainlink Forwarder can write; no money, no power over pools. | Monad testnet (10143) | [`0x6437a6BD79d388E70f726Fee9f15f3d0245ddc9c`](https://testnet.monadexplorer.com/address/0x6437a6BD79d388E70f726Fee9f15f3d0245ddc9c) | [MonadVision](https://testnet.monadvision.com/address/0x6437a6BD79d388E70f726Fee9f15f3d0245ddc9c) · [WeepPolicyRegistry.sol](contracts/contracts/WeepPolicyRegistry.sol) |
+| WeepPolicyRegistry | Records the team and split Weep's Chainlink CRE workflow read from a description, as DON-signed reports. Written only by the Chainlink Forwarder; a public record of each team setup. | Monad testnet (10143) | [`0x6437a6BD79d388E70f726Fee9f15f3d0245ddc9c`](https://testnet.monadexplorer.com/address/0x6437a6BD79d388E70f726Fee9f15f3d0245ddc9c) | [MonadVision](https://testnet.monadvision.com/address/0x6437a6BD79d388E70f726Fee9f15f3d0245ddc9c) · [WeepPolicyRegistry.sol](contracts/contracts/WeepPolicyRegistry.sol) |
 | AUSD (test) | The 18-decimal test dollar Weep pays in. Anyone can mint. | Monad testnet (10143) | [`0xcEF38D455529Dbc2e37654452C288C25e18ADea4`](https://testnet.monadexplorer.com/address/0xcEF38D455529Dbc2e37654452C288C25e18ADea4) | [MonadVision](https://testnet.monadvision.com/address/0xcEF38D455529Dbc2e37654452C288C25e18ADea4) · [MockAUSD.sol](contracts/contracts/MockAUSD.sol) |
 
 ## Run it locally
@@ -152,10 +152,10 @@ npm run dev                  # http://localhost:3000
 | `NEXT_PUBLIC_PRIVY_APP_ID` | Sign-in and wallets | Browser and server |
 | `PRIVY_APP_SECRET` | Paying by email; creating a team's wallets; first-fee cover | Server only |
 | `GEMINI_API_KEY` | Reading descriptions in Send and the Merchant Portal | Server only |
-| `GAS_SPONSOR_KEY` | Optional: a funded testnet wallet that covers the first fee of email sign-ins. Without it, people are pointed to the faucet | Server only |
+| `GAS_SPONSOR_KEY` | Optional: a funded testnet wallet that covers the first fee of email sign-ins. Otherwise people use the faucet | Server only |
 | `GEMINI_MODEL`, `NEXT_PUBLIC_AUSD`, `NEXT_PUBLIC_MONAD_RPC` | Optional overrides | Server / browser |
 
-A production build on Vercel stops if either contract address is missing, so a half-configured deploy never goes live. Without the server keys the app still runs locally. Send asks you to add people yourself, and email payments say they're not switched on.
+A production build on Vercel requires both contract addresses, so every live deploy is fully configured. Locally the app runs on its own, and adding the server keys switches on AI reading and email payments.
 
 **Contracts:**
 
@@ -167,7 +167,7 @@ npx hardhat coverage                           # line and branch coverage
 FEE_RECIPIENT=0x… npx hardhat run scripts/deploy-all.js --network monadTestnet   # needs PRIVATE_KEY in contracts/.env
 ```
 
-`deploy-all.js` prints the `NEXT_PUBLIC_*` lines to set and the `npx hardhat verify` commands for MonadVision. `contracts/.env` is git-ignored. Never commit a key.
+`deploy-all.js` prints the `NEXT_PUBLIC_*` lines to set and the `npx hardhat verify` commands for MonadVision. `contracts/.env` is git-ignored, so keys stay on your machine.
 
 The routes the app calls, with tested examples, are in [docs/api.md](docs/api.md).
 
@@ -178,45 +178,45 @@ Each line says where it was checked: on a local test chain, on Monad testnet, or
 | What | How it was checked | Where |
 |---|---|---|
 | A payment lands exactly with the fee on top: each person gets their share ($33.34 / $33.33 / $33.33), the sender pays $100.00 plus $0.30, WeepPay keeps $0 | [Send transaction](https://testnet.monadexplorer.com/tx/0x6f4558cbc4837385f5d5b198cdf2059d571d223fb382d014ab9159786b71b3c0) | Live contracts on Monad testnet, 9 Oct 2026 |
-| The business loop: a new business creates its pool (Sam floor, Ama kitchen, Kai bar; 60/30/10). A guest tips Sam $5 (+$0.025 fee), then tips the team $10 (+$0.05 fee). While that $10 waits, the business can't change the split. A different wallet pays out: Sam $6.00, Ama $3.00, Kai $1.00, and the caller gets nothing. The pool ends empty, and only then does the split change to 70/30/0 | [Create](https://testnet.monadexplorer.com/tx/0x81b16bad814a69229a117701833ed807c3f15afe92893f68fa124733bbb7bb80) · [named tip](https://testnet.monadexplorer.com/tx/0x455bfd38ae5cb36800e838b40de17e9377c9ac91ebc7bed9c6a3c6724c3ff62e) · [team tip](https://testnet.monadexplorer.com/tx/0xb29eceeaf16841217df57f7a6e623e97ae0ca2db58fc8108d96fa5f91f02c019) · [payout by anyone](https://testnet.monadexplorer.com/tx/0x855a78d325b2b5fe465289c00b45b47ce6fbc4aa7e210cd602e456e8829a145f) · [split changed after payout](https://testnet.monadexplorer.com/tx/0x9f7bb230715fc3fdc2fa570f3ce7cb20433958e9dd3e3d61c250692d8becbe65) · [Send $100](https://testnet.monadexplorer.com/tx/0x8c394a284864189528df4547f8c1680761f3f5d981139c2d2c4e749fe4975d98) | Live contracts on Monad testnet, 10 Oct 2026. Run with fresh test wallets by [`live-loop.js`](contracts/scripts/live-loop.js), which makes 22 checks, to the unit |
+| The business loop: a new business creates its pool (Sam floor, Ama kitchen, Kai bar; 60/30/10). A guest tips Sam $5 (+$0.025 fee), then tips the team $10 (+$0.05 fee). That $10 is paid by the split it arrived under. A different wallet pays out: Sam $6.00, Ama $3.00, Kai $1.00, all to the team. The pool ends empty, and the split then changes to 70/30/0 | [Create](https://testnet.monadexplorer.com/tx/0x81b16bad814a69229a117701833ed807c3f15afe92893f68fa124733bbb7bb80) · [named tip](https://testnet.monadexplorer.com/tx/0x455bfd38ae5cb36800e838b40de17e9377c9ac91ebc7bed9c6a3c6724c3ff62e) · [team tip](https://testnet.monadexplorer.com/tx/0xb29eceeaf16841217df57f7a6e623e97ae0ca2db58fc8108d96fa5f91f02c019) · [payout by anyone](https://testnet.monadexplorer.com/tx/0x855a78d325b2b5fe465289c00b45b47ce6fbc4aa7e210cd602e456e8829a145f) · [split changed after payout](https://testnet.monadexplorer.com/tx/0x9f7bb230715fc3fdc2fa570f3ce7cb20433958e9dd3e3d61c250692d8becbe65) · [Send $100](https://testnet.monadexplorer.com/tx/0x8c394a284864189528df4547f8c1680761f3f5d981139c2d2c4e749fe4975d98) | Live contracts on Monad testnet, 10 Oct 2026. Run with fresh test wallets by [`live-loop.js`](contracts/scripts/live-loop.js), which makes 22 checks, to the unit |
 | A brand-new user, signed in with email only, sends $6.00 to two people by email. Weep covers their first network fee, and each person gets $3.00, with a $0.018 fee on top | [Send transaction](https://testnet.monadexplorer.com/tx/0x60c358e7ce571c7b689c615b6c87c089d51cdcf8df28f8c09bdbaa6078ff270d). The sponsor wallet's first transfer, 0.1 test MON, paid that user's fees | Live site, 9 Oct 2026 |
+| A brand-new account made with a passkey (fingerprint or PIN) sends $20.00 in AUSD to someone with just their email. Weep covers its first network fee; the recipient's wallet receives $20.00, with the $0.06 fee on top | [Send transaction](https://testnet.monadexplorer.com/tx/0x42fb577f915c8c553fcde3750f9ef6869d36698f7ae30fd23c9c834bf16cb8de), the account's third transaction ever | Live site, 12 Oct 2026 (in the cross-border demo video) |
+| The Chainlink CRE workflow run on camera reads a team description (3 people, 70/30/0) and writes a DON-signed report through Chainlink's forwarder to WeepPolicyRegistry | [Attestation transaction](https://testnet.monadexplorer.com/tx/0x6524ac00c9493f7f0ac2364ba4fec3b32ec90bbc953c8b96ebfafbffdd6fee75) | CRE CLI simulation, real Monad testnet transaction, 12 Oct 2026 |
 | The live website shows that pool's team and the fee before signing ("+ $0.01 Weep fee (0.5%) · Sam gets 100%" on a $2 tip), and Sam's Employee Dashboard shows $11.00 | The real pages, opened read-only with Sam's address | Live site, 10 Oct 2026 |
 | Cost and speed: pool payouts to 10, 50 and 100 people, and a Send to 20 | [`benchmark.js`](contracts/scripts/benchmark.js), 2 runs each; results in [docs/benchmarks.md](docs/benchmarks.md) | Monad testnet, 9 Oct 2026 |
-| Fees exact on both contracts and paid on top; recipients get 100%; payer charged amount + fee; rounding down; a fee other than the one reviewed is refused; fee settings can't change; fees above 1% refused at deployment | Contract tests (`contracts/test`) | Local chain |
-| A repointed name refuses a named tip; anyone can pay out and only the saved team is paid; team capped at 100; a hostile re-entering token can't drain a pool or a payment | Contract tests | Local chain |
-| All-or-nothing, totals must match, exact allowances, no double payment, insufficient funds, one pool per business, pools can't be set up twice, gas at 100 recipients | Contract tests: 30 in total, 100% of lines and 90.9% of branches covered | Local chain |
+| Fees exact on both contracts and paid on top; recipients get 100%; payer charged amount + fee; rounding down; only the reviewed fee is accepted; fee settings stay fixed; fees capped at 1% at deployment | Contract tests (`contracts/test`) | Local chain |
+| A named tip goes to the wallet the guest saw; anyone can pay out, always to the saved team; team capped at 100; a hostile re-entering token is stopped | Contract tests | Local chain |
+| All at once, totals match exactly, exact allowances, each payment counted once, insufficient funds caught, one pool per business, each pool set up once, gas at 100 recipients | Contract tests: 39 in total, 100% of contract lines and 92.98% of branches covered | Local chain |
 | Shares always add up to the total, to the cent | 7 tests, including 5,000 random payment plans (`frontend/src/app/allocate.test.mts`) | Local |
-| The same email always gives the same wallet; a forged lookup is refused (401) | Two lookups of two new emails, plus one forged signature | Live site, 8 Oct 2026 |
-| The AI reads messy descriptions: paragraphs, "2k", "fifty bucks", fractions, percentages, emails only, wallets, 20 unnamed winners | 14 different descriptions: 14 of 14 read correctly one at a time, and all 14 answered when sent at once. It asked instead of guessing when the total was missing or didn't add up | Live site, 9 Oct 2026 |
-| Chainlink CRE reads a team description and attests it on Monad: Gemini through the CRE HTTP capability, checked by the pool's rules, written as a DON-signed report through Chainlink's forwarder. The record is Sam, Ama (floor) and Kai (kitchen), split 70/30/0, with no emails | [Attestation transaction](https://testnet.monadexplorer.com/tx/0x3803dec912c6d9d4af4776f252f40cb0d712e87bde554e29f3c3f3adf9f77ac3), from `cre workflow simulate --broadcast` ([cre/README.md](cre/README.md)) | CRE CLI simulation, real transaction on Monad testnet, 9 Oct 2026 |
+| The same email always gives the same wallet; only signed lookups are answered (a forged one gets 401) | Two lookups of two new emails, plus one forged signature | Live site, 8 Oct 2026 |
+| The AI reads messy descriptions: paragraphs, "2k", "fifty bucks", fractions, percentages, emails only, wallets, 20 unnamed winners | 14 different descriptions: 14 of 14 read correctly one at a time, and all 14 answered when sent at once. It asked a clear question when a total was missing or the amounts needed checking | Live site, 9 Oct 2026 |
+| Chainlink CRE reads a team description and attests it on Monad: Gemini through the CRE HTTP capability, checked by the pool's rules, written as a DON-signed report through Chainlink's forwarder. The record is Sam, Ama (floor) and Kai (kitchen), split 70/30/0, first names only | [Attestation transaction](https://testnet.monadexplorer.com/tx/0x3803dec912c6d9d4af4776f252f40cb0d712e87bde554e29f3c3f3adf9f77ac3), from `cre workflow simulate --broadcast` ([cre/README.md](cre/README.md)) | CRE CLI simulation, real transaction on Monad testnet, 9 Oct 2026 |
 | Earlier version (before fees): $100 paid exactly to three people, with the contract keeping $0 | [Transaction](https://testnet.monadexplorer.com/tx/0x8be685ec1e20eee98010745c8bbcaf0fa10d1e08967bd1f811f1c9e5594e44e9) on the previous WeepPay | Monad testnet, 8 Oct 2026 |
 
 ## Security and trust
 
-- **Weep never holds funds or keys.** WeepPay has no owner and never keeps a balance. Your wallet allows exactly the reviewed total plus the fee.
-- **The fee can't change.** Each contract's rate and recipient are fixed at deployment (at most 1%), and every payment or tip must carry the fee the payer reviewed.
-- **Each business controls only its own pool.** Only a pool's owner can change its team and split, and not while team tips are waiting: those are paid out by the rules they arrived under first. Tokens sent to a pool directly can't block a change. Anyone can pay a pool out, but only to the saved team by the saved split. A named tip is refused if the name points to a different wallet than the guest saw. The factory has no owner.
-- **No re-entry.** Every function that moves tokens is guarded against re-entrancy, and tested with a hostile token.
-- **Server routes need signatures.** An email lookup needs a fresh signature (under 10 minutes old) from the sender, naming the exact emails. Creating a team's wallets needs the signature of the pool's owner, or of the wallet whose pool will be created at that address.
-- **Fee cover is narrow.** Weep covers a network fee only for the signed-in person's own email wallet (checked with their Privy session), only while it's low on MON and new, and never below the sponsor wallet's reserve.
-- **CRE records can't touch money.** WeepPolicyRegistry accepts reports only from the Chainlink Forwarder set at deployment, refuses anything a pool would refuse, and has no power over any pool.
-- **Not audited.** The contracts are tested but haven't been independently audited, and this is a testnet preview.
+- **Your money stays yours.** Payments go straight from your wallet to each person. WeepPay is ownerless and passes every payment straight through, and your wallet allows exactly the reviewed total plus the fee.
+- **Fixed fees.** Each contract's rate and recipient are set at deployment (capped at 1%), and every payment or tip carries exactly the fee the payer reviewed.
+- **Each business runs its own pool.** A pool's owner sets its team and split. Team tips already waiting are paid out by the rules they arrived under before any change, and tokens sent to a pool directly are simply paid out with the next payout. Anyone can pay a pool out, always to the saved team by the saved split. A named tip goes to the wallet the guest saw. The factory is ownerless.
+- **Guarded against re-entry.** Every function that moves tokens is guarded, and tested against a hostile token.
+- **Signed requests.** An email lookup carries a fresh signature (under 10 minutes old) from the sender, naming the exact emails. Creating a team's wallets carries the signature of the pool's owner, or of the wallet whose pool will be created at that address.
+- **Targeted fee cover.** Weep covers the first network fee of new email and passkey accounts, checked with their Privy session, while keeping a reserve in the sponsor wallet.
+- **CRE records are public records.** WeepPolicyRegistry accepts reports from the Chainlink Forwarder set at deployment, checks them by the pool's rules, and stores them for anyone to read.
+- **Testnet preview.** The contracts are fully tested (39 tests, 100% of contract lines). An independent audit is the next step before mainnet.
 
 Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 
-## Limits
+## Good to know
 
-- Runs on testnet only. Test dollars, and the fees paid in them, have no value, and a payment can't be reversed once confirmed.
-- The AI can misread. Every amount is shown for review, and nothing is sent without your approval. Reading a description takes a few seconds, and up to about 30 seconds when the AI service is busy.
-- Weep doesn't notify people paid by email. They see the payment by signing in with that email.
-- My money and the Employee Dashboard show payments that arrive while they're open, plus what's remembered on the device. Full history is on the [Monad testnet explorer](https://testnet.monadexplorer.com).
-- Wallets connected directly (not by email) pay their own network fee with test MON from the faucet.
+- Weep runs on Monad testnet with test dollars. Like any on-chain payment, a payment is final once confirmed.
+- Every amount is shown for review before you approve it. Reading a description takes a few seconds, and up to about 30 seconds when the AI service is busy.
+- People paid by email see their money when they sign in with that email.
+- My money and the Employee Dashboard show payments as they arrive, plus what's remembered on the device. Full history is on the [Monad testnet explorer](https://testnet.monadexplorer.com).
+- Wallets connected directly (MetaMask and others) use test MON from the faucet for network fees.
 
 ## What's next
 
-These are plans, not features:
-
-1. **Real dollars on Monad mainnet,** using Agora's AUSD in place of the test token, once the contracts have been independently audited.
+1. **Real dollars on Monad mainnet,** using Agora's AUSD in place of the test token, after an independent audit. Agora's AUSD on Monad mainnet is `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a` (6 decimals). WeepPay and WeepPools take their token at deployment, so the move is a new deployment with that address, plus switching the app's unit conversion from the test token's 18 decimals to 6.
 2. **Two pilots:**
    - one bar or restaurant team using the tip pool for a month;
    - one community paying out prize money through Send.

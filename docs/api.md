@@ -1,6 +1,6 @@
 # API reference
 
-The five server routes the Weep app calls. They run on the website's own server: the base URL is `https://weep-protocol.vercel.app` live, or `http://localhost:3000` locally. Every request and response body is JSON. The routes keep no data.
+The five server routes the Weep app calls. They run on the website's own server: the base URL is `https://weep-protocol.vercel.app` live, or `http://localhost:3000` locally. Every request and response body is JSON. The routes keep zero data.
 
 | Route | Does | Needs |
 |---|---|---|
@@ -10,13 +10,13 @@ The five server routes the Weep app calls. They run on the website's own server:
 | [`POST /api/setup/wallets`](#post-apisetupwallets) | Creates wallets for a team's emails | `PRIVY_APP_SECRET`, the business's signature for its own pool |
 | [`POST /api/gas`](#post-apigas) | Covers the first network fee of a new email or passkey account | `PRIVY_APP_SECRET`, `GAS_SPONSOR_KEY`, the person's Privy session |
 
-Payments never go through these routes. They are sent from the person's own wallet straight to the contracts, as described in [architecture.md](architecture.md).
+Payments go straight from the person's own wallet to the contracts, as described in [architecture.md](architecture.md).
 
 ---
 
 ## POST /api/send/parse
 
-Turns a plain-words payment into rows for the Send review screen. The AI only classifies each person's share: `fixed` dollars, a `percent` of the total, or an `equal` share of what's left. It does no arithmetic. The app works out the exact cents with [`allocate.ts`](../frontend/src/app/allocate.ts).
+Turns a plain-words payment into rows for the Send review screen. The AI classifies each person's share: `fixed` dollars, a `percent` of the total, or an `equal` share of what's left. The app works out the exact cents with [`allocate.ts`](../frontend/src/app/allocate.ts).
 
 **Request**
 
@@ -28,10 +28,10 @@ Turns a plain-words payment into rows for the Send review screen. The AI only cl
 
 | Field | Type | Meaning |
 |---|---|---|
-| `total` | number | Total in dollars as written; `0` if none was stated |
+| `total` | number | Total in dollars as written; `0` when the text leaves the total open |
 | `rows[]` | array | Up to 100, in the order written |
 | `rows[].name` | string | As written, up to 40 characters; `Winner N` when people are only counted |
-| `rows[].contact` | string | Email or `0x` wallet exactly as written; `""` if none |
+| `rows[].contact` | string | Email or `0x` wallet exactly as written, or `""` |
 | `rows[].mode` | `"fixed"` \| `"percent"` \| `"equal"` | How this person's share is set |
 | `rows[].value` | number | Dollars for `fixed`, percent for `percent`, `0` for `equal` |
 | `questions[]` | string[] | Up to 4 short questions about anything unclear; empty when all is clear |
@@ -62,10 +62,10 @@ The app turns this into $30.00, $15.00 and $15.00.
 
 | Status | `error` | When | Retry? |
 |---|---|---|---|
-| 400 | `empty` | No text | No: send text |
+| 400 | `empty` | The text is empty | Send text |
 | 400 | `too-long` | Over 6,000 characters | No: shorten it |
 | 502 | `ai-failed` | Every model failed or returned invalid output | Yes |
-| 503 | `not-configured` | No `GEMINI_API_KEY` on the server | No |
+| 503 | `not-configured` | The server needs `GEMINI_API_KEY` | Set the key |
 
 Models are tried newest first (`GEMINI_MODEL` if set, then `gemini-3.8-flash`, `gemini-3.5-flash`, `gemini-3.5-flash-lite`). The route moves on only when a model is unavailable (403, 404) or busy (429, 503). It uses temperature 0 and a fixed JSON schema.
 
@@ -82,7 +82,7 @@ Any sender can call this route, but only with a message they've just signed that
 | Field | Type | Rules |
 |---|---|---|
 | `emails` | string[] | 1–100 valid emails. They are trimmed, lowercased and deduplicated |
-| `issuedAt` | string | ISO 8601 time. Must be no more than 10 minutes old and no more than 1 minute in the future |
+| `issuedAt` | string | ISO 8601 time. Within the last 10 minutes (up to 1 minute ahead is accepted) |
 | `signer` | `0x…` | The sender's wallet address |
 | `signature` | `0x…` | `personal_sign` by `signer` of the message below |
 
@@ -120,23 +120,23 @@ console.log(await res.json());
 { "wallets": [ { "email": "ama@example.com", "wallet": "0x…" }, { "email": "kai@example.com", "wallet": "0x…" } ] }
 ```
 
-`wallet` is `null` for any email Privy couldn't resolve just then. The Send page then stops before paying anyone.
+`wallet` is `null` for an email Privy is still resolving. The Send page then asks the sender to try again.
 
 **Errors**
 
 | Status | `error` | When |
 |---|---|---|
-| 400 | `bad-emails` | No emails, more than 100, or one isn't an email |
+| 400 | `bad-emails` | The list needs 1 to 100 valid emails |
 | 401 | `unsigned` | `signer`, `signature` or `issuedAt` missing |
 | 401 | `expired` | `issuedAt` is older than 10 minutes, or in the future |
-| 401 | `bad-signature` | The signature doesn't match `signer` and the message |
-| 503 | `not-configured` | No `PRIVY_APP_SECRET` on the server |
+| 401 | `bad-signature` | The signature must match `signer` and the message |
+| 503 | `not-configured` | The server needs `PRIVY_APP_SECRET` |
 
 ---
 
 ## POST /api/setup/parse
 
-Reads a business owner's description of their team into people and a tip split, for the Merchant Portal to review. Nothing is saved.
+Reads a business owner's description of their team into people and a tip split, for the Merchant Portal to review.
 
 **Request**
 
@@ -149,8 +149,8 @@ Reads a business owner's description of their team into people and a tip split, 
 | Field | Type | Meaning |
 |---|---|---|
 | `employees[]` | array | `{ name, email, group }`. `group` is `floor`, `kitchen` or `bar`; `email` is lowercase or `""` |
-| `pool` | object | `{ foh, boh, bar }`: whole percentages for floor, kitchen and bar. If none is given, the default is 60/30/10, with a note |
-| `notes[]` | string[] | Up to 5 plain notes, such as a missing email or a split that doesn't add up to 100 |
+| `pool` | object | `{ foh, boh, bar }`: whole percentages for floor, kitchen and bar. The default is 60/30/10, with a note |
+| `notes[]` | string[] | Up to 5 plain notes, such as an email to add or a split to bring to 100 |
 
 **Example** (live, 8 Oct 2026):
 
@@ -180,7 +180,7 @@ curl -s https://weep-protocol.vercel.app/api/setup/parse \
 Makes sure every person on a business's team has a wallet before they ever sign in. A business may only do this for its own pool. The server accepts the signer if either:
 
 - the signer is the pool's `owner()`, for a pool created by WeepPools; or
-- the pool doesn't exist yet and `WeepPools.predict(signer)` equals it, meaning the signer's own pool is about to be created there.
+- the pool is new and `WeepPools.predict(signer)` equals it, meaning the signer's own pool is about to be created there.
 
 **Request**: the same fields as [`/api/send/wallets`](#post-apisendwallets), with 1–50 emails, plus:
 
@@ -209,14 +209,14 @@ Issued: <issuedAt>
 
 | Status | `error` | When |
 |---|---|---|
-| 401 | `unsigned` | Also returned when `pool` is missing or isn't an address |
-| 403 | `not-owner` | The signer doesn't run that pool and isn't about to create it |
+| 401 | `unsigned` | Also returned when `pool` needs a valid address |
+| 403 | `not-owner` | The signer must own that pool, or be about to create it |
 
 ---
 
 ## POST /api/gas
 
-Covers the network fee for someone who signed in with email, so their first payment needs nothing but an email. The route sends 0.1 test MON from Weep's sponsor wallet to the person's own Privy email wallet. The app calls it before a payment, a team setup or a payout, only when that wallet holds less than 0.05 MON.
+Covers the network fee for someone who signed in with email, so their first payment takes just an email. The route sends 0.1 test MON from Weep's sponsor wallet to the person's own Privy email wallet. The app calls it before a payment, a team setup or a payout, only when that wallet holds less than 0.05 MON.
 
 **Request**
 
@@ -228,7 +228,7 @@ Covers the network fee for someone who signed in with email, so their first paym
 The route gives MON only when every check passes:
 
 - the token is a valid Privy session;
-- `address` is that person's own Privy email wallet, not a wallet they connected;
+- `address` is that person's own Privy email wallet;
 - the wallet holds less than 0.05 MON and has sent fewer than 20 transactions;
 - the sponsor wallet would keep at least 1 MON afterwards.
 
@@ -239,10 +239,10 @@ The route gives MON only when every check passes:
 | 200 | `{ "covered": true, "hash": "0x…" }` | 0.1 MON sent; `hash` is the transaction |
 | 200 | `{ "covered": false, "reason": "enough" }` | The wallet already has enough |
 | 400 | `{ "error": "bad-address" }` | `address` missing or invalid |
-| 401 | `{ "error": "signed-out" }` | No valid Privy session |
-| 403 | `{ "error": "not-your-wallet" }` | The address isn't the person's own email wallet |
+| 401 | `{ "error": "signed-out" }` | A valid Privy session is required |
+| 403 | `{ "error": "not-your-wallet" }` | The address must be the person's own email wallet |
 | 429 | `{ "error": "limit" }` | The wallet has already made 20 or more transactions |
 | 503 | `{ "error": "not-configured" }` or `{ "error": "empty" }` | Cover is switched off, or the sponsor wallet is running low |
-| 502 | `{ "error": "failed" }` | The transfer couldn't be sent |
+| 502 | `{ "error": "failed" }` | The transfer is ready to retry |
 
-When the route can't help, the app points the person to [Monad's faucet](https://faucet.monad.xyz) instead.
+For other wallets, the app points the person to [Monad's faucet](https://faucet.monad.xyz) instead.

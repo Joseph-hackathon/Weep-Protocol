@@ -20,7 +20,7 @@ What Weep's main transactions cost and how long they take on Monad, measured wit
   - Before each run, the pool receives a team tip of $1 per person.
   - The measured transaction is `payoutTeam()`.
 - **Send.** One `WeepPay.pay` to 20 people, $1 each, with the 0.3% fee on top.
-- **Fresh recipients.** Every run uses brand-new wallets that have never held the token. That's the most expensive case, because each first transfer to an address costs more.
+- **Fresh recipients.** Every run uses brand-new wallets receiving the token for the first time. That's the most expensive case, because each first transfer to an address costs more.
 - **What's measured, per transaction:**
   - the gas used, from the receipt;
   - the test MON actually charged, as the sender's balance before minus after;
@@ -50,6 +50,6 @@ Transactions:
 ## Limits
 
 - **Small sample.** Two runs each, on one day, from one laptop. Times include the public endpoint's network round trips and the 200 ms polling step.
-- **Testnet prices.** MON costs are at testnet gas prices, and the test MON has no value. Mainnet prices will differ.
+- **Testnet prices.** MON costs are at testnet gas prices, using test MON. Mainnet prices will differ.
 - **Price swings.** The two 100-person payouts used identical gas but cost 0.4555 and 0.3707 MON, because the gas price moved between them.
 - **Worst case only.** Recipients that already hold the token cost less than the fresh wallets measured here.

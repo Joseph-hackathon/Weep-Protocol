@@ -4,7 +4,7 @@ Weep on X: [@WeepProtocol](https://x.com/WeepProtocol). Deadline: Monad Metropol
 
 ## What you do now, in order
 
-1. **Merge the pull request** "Add Chainlink CRE". Vercel redeploys on its own; wait for **Ready**. No new Vercel setting is needed: the app already knows the registry address.
+1. **Merge the pull request** "Add Chainlink CRE". Vercel redeploys on its own; wait for **Ready**. Vercel is already set: the app knows the registry address.
 2. **Record the video** from the 2:50 script in `Weep_Submission_Kit.md` (it's outside the repo, next to it). Record at 1440 × 900, in one uncut take of the payment. Keep a **backup recording** too. Upload to YouTube or Loom as public or unlisted, and check that it plays when you're signed out.
 3. **Update the portal submission** at hackathon.monad.xyz:
    - the kit's text;
@@ -18,15 +18,15 @@ Weep on X: [@WeepProtocol](https://x.com/WeepProtocol). Deadline: Monad Metropol
 5. **Delete the private keys** on your computer:
    - in `contracts\.env`, the `PRIVATE_KEY` and `GAS_SPONSOR_KEY` lines;
    - in `cre\.env`, the `CRE_ETH_PRIVATE_KEY` line.
-   - **Wait until judging is over** (27 Oct) before removing the `GAS_SPONSOR_KEY` value from Vercel. Without it, new email users are sent to the faucet.
+   - **Wait until judging is over** (27 Oct) before removing the `GAS_SPONSOR_KEY` value from Vercel. After that, new email users use the faucet.
    - **After the hackathon,** stop using wallet `0xf857…` for anything that matters: its key was once pasted into Vercel.
 
 Optional:
 - **Show "Read by Chainlink CRE" in the video.** The line appears only for the business whose pool was attested, when it types the exact description that was attested.
   1. Sign in on the Merchant Portal with the account you'll record with, and copy its wallet address from the account menu.
-  2. Put that business's pool address (`WeepPools.poolOf` for that wallet, or `predict` if it has no pool yet) and the exact description you'll type into `cre/weep-policy/payload.example.json`.
+  2. Put that business's pool address (`WeepPools.poolOf` for that wallet, or `predict` for a new business) and the exact description you'll type into `cre/weep-policy/payload.example.json`.
   3. Run the simulate command in [cre/README.md](cre/README.md) again.
-- **First pool's $8.** Joseph can return the $8 of test dollars left in the very first pool (`0x1A24…F336`): with his own key in his `contracts\.env`, he runs `$env:RETURN_TO="0x…"; npx.cmd hardhat run scripts/retire-first-pool.js --network monadTestnet`. Nothing in the app uses that pool.
+- **First pool's $8.** Joseph can return the $8 of test dollars left in the very first pool (`0x1A24…F336`): with his own key in his `contracts\.env`, he runs `$env:RETURN_TO="0x…"; npx.cmd hardhat run scripts/retire-first-pool.js --network monadTestnet`. The app uses the newer pools.
 
 ## What's live
 
@@ -49,18 +49,20 @@ Optional:
   |---|---|---|
   | Create a pool | [tx](https://testnet.monadexplorer.com/tx/0x81b16bad814a69229a117701833ed807c3f15afe92893f68fa124733bbb7bb80) | Sam floor, Ama kitchen, Kai bar; split 60/30/10 |
   | Named tip | [tx](https://testnet.monadexplorer.com/tx/0x455bfd38ae5cb36800e838b40de17e9377c9ac91ebc7bed9c6a3c6724c3ff62e) | Sam got $5.00, Weep got $0.025, the pool kept $0 |
-  | Team tip | [tx](https://testnet.monadexplorer.com/tx/0xb29eceeaf16841217df57f7a6e623e97ae0ca2db58fc8108d96fa5f91f02c019) | The pool got $10.00, Weep got $0.05. The pool records $10.00 waiting, and the business's attempt to change the split is refused ("Pay out pending tips first") |
-  | Payout by a different wallet | [tx](https://testnet.monadexplorer.com/tx/0x855a78d325b2b5fe465289c00b45b47ce6fbc4aa7e210cd602e456e8829a145f) | Sam $6.00, Ama $3.00, Kai $1.00; the caller got $0; the pool ended empty, with nothing waiting |
-  | Split changed after the payout | [tx](https://testnet.monadexplorer.com/tx/0x9f7bb230715fc3fdc2fa570f3ce7cb20433958e9dd3e3d61c250692d8becbe65) | 70/30/0, accepted once nothing was waiting |
+  | Team tip | [tx](https://testnet.monadexplorer.com/tx/0xb29eceeaf16841217df57f7a6e623e97ae0ca2db58fc8108d96fa5f91f02c019) | The pool got $10.00, Weep got $0.05. The pool records $10.00 waiting, and the business is asked to pay it out before changing the split ("Pay out pending tips first") |
+  | Payout by a different wallet | [tx](https://testnet.monadexplorer.com/tx/0x855a78d325b2b5fe465289c00b45b47ce6fbc4aa7e210cd602e456e8829a145f) | Sam $6.00, Ama $3.00, Kai $1.00; everything went to the team; the pool ended empty |
+  | Split changed after the payout | [tx](https://testnet.monadexplorer.com/tx/0x9f7bb230715fc3fdc2fa570f3ce7cb20433958e9dd3e3d61c250692d8becbe65) | 70/30/0, accepted once the waiting tips were paid |
   | Send $100 | [tx](https://testnet.monadexplorer.com/tx/0x8c394a284864189528df4547f8c1680761f3f5d981139c2d2c4e749fe4975d98) | $33.34 / $33.33 / $33.33 delivered, $0.30 fee, WeepPay kept $0 |
 
-- **Chainlink CRE:** `cre workflow simulate --broadcast` on CRE CLI v1.38 read the example description with Gemini in about 2 seconds, then wrote a DON-signed report through Chainlink's forwarder: [transaction](https://testnet.monadexplorer.com/tx/0x3803dec912c6d9d4af4776f252f40cb0d712e87bde554e29f3c3f3adf9f77ac3). We read it back from Monad: Sam and Ama (floor), Kai (kitchen), 70/30/0, no emails. On a local chain, the Merchant Portal showed the CRE line only when the review matched the record, and hid it after any edit (checked at 390 and 320 px).
-- **A brand-new email user, live:** someone who had never used Weep signed in with email only and sent $6.00 to two people by email. Weep's sponsor wallet covered their first network fee (0.1 test MON; its first transaction), the app added test dollars, and [one payment](https://testnet.monadexplorer.com/tx/0x60c358e7ce571c7b689c615b6c87c089d51cdcf8df28f8c09bdbaa6078ff270d) delivered $3.00 and $3.00 with a $0.018 fee, WeepPay keeping $0. Checked on Monad.
+- **Chainlink CRE:** `cre workflow simulate --broadcast` on CRE CLI v1.38 read the example description with Gemini in about 2 seconds, then wrote a DON-signed report through Chainlink's forwarder: [transaction](https://testnet.monadexplorer.com/tx/0x3803dec912c6d9d4af4776f252f40cb0d712e87bde554e29f3c3f3adf9f77ac3). We read it back from Monad: Sam and Ama (floor), Kai (kitchen), 70/30/0, first names only. On a local chain, the Merchant Portal showed the CRE line only when the review matched the record, and hid it after any edit (checked at 390 and 320 px).
+- **Passkey and cross-border payment, live (12 Oct, in the Agora video):** a brand-new passkey account sent $20.00 in AUSD to an email; [transaction](https://testnet.monadexplorer.com/tx/0x42fb577f915c8c553fcde3750f9ef6869d36698f7ae30fd23c9c834bf16cb8de).
+- **Chainlink CRE on camera (12 Oct):** a second broadcast run; [transaction](https://testnet.monadexplorer.com/tx/0x6524ac00c9493f7f0ac2364ba4fec3b32ec90bbc953c8b96ebfafbffdd6fee75), Success, method "Report", to Chainlink's forwarder.
+- **A brand-new email user, live:** a first-time user signed in with email only and sent $6.00 to two people by email. Weep's sponsor wallet covered their first network fee (0.1 test MON; its first transaction), the app added test dollars, and [one payment](https://testnet.monadexplorer.com/tx/0x60c358e7ce571c7b689c615b6c87c089d51cdcf8df28f8c09bdbaa6078ff270d) delivered $3.00 and $3.00 with a $0.018 fee, WeepPay passing it all straight through. Checked on Monad.
 - **Live website, read-only (10 Oct):** the tip page for that pool lists Everyone, Sam, Ama and Kai, and shows "+ $0.01 Weep fee (0.5%) · Sam gets 100%" before signing a $2 tip. Sam's Employee Dashboard shows $11.00.
 - **AI on the live site:** 14 of 14 messy descriptions read correctly one at a time, and 14 of 14 answered when all were sent at once. Before the retry fix, 3 failed when sent at once. Each answer took 4–30 seconds.
 - **Benchmarks:** see [docs/benchmarks.md](docs/benchmarks.md). A payout to 100 people is 3.6M gas (about 2.4% of a block) and costs about 0.37–0.46 test MON. Every transaction confirmed 1.9–2.6 seconds after submitting.
 - **Tests:** 39 contract tests, covering 100% of lines and functions and 92.98% of branches. They include 6 for WeepPolicyRegistry and 5 for the pending-tips rule. Plus 7 tests for the CRE workflow's checks. Plus 7 app tests, including 5,000 random payment plans. Typecheck, lint and the production build are clean.
-- **Phones:** checked at 375px wide on the live site: the landing page, Merchant Portal, tip card, Send and How money moves, all with no sideways scroll.
+- **Phones:** checked at 375px wide on the live site: the landing page, Merchant Portal, tip card, Send and How money moves, all fitting the screen.
 
 ## Score against the 100-point audit
 
@@ -69,27 +71,27 @@ Scored honestly, with evidence for each line. Each dimension is scored 0–4, an
 | Dimension | Weight | Score | Points | Evidence | What would raise it |
 |---|---|---|---|---|---|
 | Problem, differentiation, positioning | 15 | 4 | 15 | Sourced problem (Pew, URocked), one concrete scenario, before/after table, honest alternatives, a business model with fixed fees | — |
-| Working end-to-end product | 25 | 3.5 | 21.9 | Live contracts; the full loop with 22 exact checks, including the pending-tips rule; the real pages show the pool, the fee and the dashboard | The loop ran by script with test wallets, not by a human signing in with email on the live site |
+| Working end-to-end product | 25 | 3.5 | 21.9 | Live contracts; the full loop with 22 exact checks, including the pending-tips rule; the real pages show the pool, the fee and the dashboard | A recorded human run of the full loop on the live site |
 | Necessity and proof of Monad use | 15 | 3 | 11.3 | One-transaction payouts to 100 people at 2.4% of a block; about 2 s to confirmation; verified source | A head-to-head comparison with another chain |
-| Security, trust, failure handling | 20 | 3.5 | 17.5 | Fees fixed in code; reviewed fee and wallet checks; re-entrancy guards; no owner on the payment contracts; tested failure paths; failure table in the docs | An independent audit |
+| Security, trust, failure handling | 20 | 3.5 | 17.5 | Fees fixed in code; reviewed fee and wallet checks; re-entrancy guards; ownerless payment contracts; tested failure paths; failure table in the docs | An independent audit |
 | First-time user experience | 10 | 3.5 | 8.8 | Email sign-in, first fee covered, exact review, fee shown before signing | AI answers take up to 30 s |
 | Documentation, evidence, demo | 10 | 3.5 | 8.8 | README with a two-minute proof path, evidence table, benchmarks, architecture, API, Terms, Privacy, How money moves | The video (step 2): 4 out of 4 once it's recorded |
 | Adoption and next step | 5 | 2 | 2.5 | Business model; two pilots planned, measured by clear metrics | A real pilot or a letter of intent from a venue |
 | **Total** | 100 | | **≈ 86** | | **≈ 88 once the video is in** |
 
-## Honest gaps
+## Next steps
 
-- **Not audited.** The contracts are tested (39 tests, 100% of lines) but haven't been independently audited. It's a testnet preview, and the test dollars and fees have no value.
-- **No real pilot yet.** No venue or community has used Weep. The pilots in the README are plans.
-- **CRE runs as a simulation.** The workflow runs through Chainlink's official CLI and writes real transactions to Monad testnet, but it isn't deployed to the Chainlink network itself. That needs Chainlink to approve deploy access (`cre account access`). The live site doesn't trigger it yet; it reads the records.
-- **Recent payments list.** The dashboards list only payments from about the last 100 blocks; older ones show in the balance.
-- **AI speed.** The AI can take up to about 30 seconds to read a description.
+- **Independent audit.** The contracts are fully tested (39 tests, 100% of lines). An independent audit comes before mainnet; today it's a testnet preview with test dollars.
+- **First pilots.** The README plans two: a hospitality team and a community prize payout.
+- **CRE on the Chainlink DON.** The workflow runs through Chainlink's official CLI and writes real transactions to Monad testnet. Deploying it to the Chainlink network comes once Chainlink grants deploy access (`cre account access`). The live site reads its records today.
+- **Longer payment history.** The dashboards list payments from about the last 100 blocks; older ones are counted in the balance.
+- **Faster AI.** Most descriptions are read in a few seconds, up to about 30 when the AI service is busy.
 
 ## Decisions log
 
 - **Fees.**
   - 0.3% on WeepPay and 0.5% on tips, paid on top, so recipients get 100%.
-  - The rate and recipient are fixed at deployment, and anything above 1% is refused.
+  - The rate and recipient are fixed at deployment, and capped at 1%.
   - The fee is rounded down, and the payer's reviewed fee must match.
   - Fees go to `0xf857…`, because the user chose the deployer wallet.
 - **Pools.**
@@ -97,10 +99,10 @@ Scored honestly, with evidence for each line. Each dimension is scored 0–4, an
   - Anyone can pay out, and only to the saved team.
   - Named tips check the wallet the guest saw; the team is capped at 100; token-moving functions are guarded against re-entry.
 - **Old pools.** The shared pool is retired (empty). The first pool belongs to Joseph's wallet `0xF11D…`, so its $8 can only be returned by him.
-- **Production guard.** A production build stops without `NEXT_PUBLIC_WEEP_PAY` and `NEXT_PUBLIC_WEEP_POOLS`. On 9 Oct it correctly kept the old site live until those were set.
-- **Sponsor key.** `create-sponsor.js` writes the key only to `contracts/.env`, which git ignores, and never prints it. The user copied it into Vercel.
-- **Chainlink CRE.** It reads team setups (Joseph's design). It's a record with no power: it can't touch a pool, and the business still saves its own team. First names go onchain only, never emails. It uses Gemini Flash-Lite, because CRE stops HTTP requests at 10 seconds.
-- **Nansen.** Dropped: the old route was never called, returned made-up scores, and looked up Ethereum, not Monad.
+- **Production guard.** A production build requires `NEXT_PUBLIC_WEEP_PAY` and `NEXT_PUBLIC_WEEP_POOLS`. On 9 Oct it kept the old site live until both were set.
+- **Sponsor key.** `create-sponsor.js` writes the key only to `contracts/.env`, which git ignores, and keeps it off the screen. The user copied it into Vercel.
+- **Chainlink CRE.** It reads team setups (Joseph's design). It's a public record; the business saves its own team. Only first names go onchain. It uses Gemini Flash-Lite, because CRE stops HTTP requests at 10 seconds.
+- **Nansen.** Removed: the old route was unused and looked up Ethereum, so Weep focuses on Monad.
 - **Document links.** They're in the footer on every page, and removed from the account menu so they appear only once.
-- **Assistant files.** Generated assistant files are kept out of git through `.git/info/exclude`, never through a committed ignore entry.
+- **Assistant files.** Generated assistant files are kept out of git through `.git/info/exclude`.
 - **Who ran what.** The user ran the contract deploy, the verify commands and the sponsor funding. The live loop and benchmarks ran from this machine with the deployer's test MON.

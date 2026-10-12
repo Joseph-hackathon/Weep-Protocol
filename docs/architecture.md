@@ -41,7 +41,7 @@ flowchart TB
 
 **The browser** renders every screen, works out amounts, and reads Monad directly through the public RPC. Every transaction is signed in the person's own wallet.
 
-**The server** does only what can't be done safely in a browser. It holds the Gemini key, the Privy app secret and the sponsor wallet that covers first fees. It has no database and stores nothing about users or payments.
+**The server** handles the few tasks that need a secret: it holds the Gemini key, the Privy app secret and the sponsor wallet that covers first fees. It is serverless and keeps zero data about users or payments.
 
 **Monad** holds all the state: balances, payments, each business's team and split.
 
@@ -58,8 +58,8 @@ flowchart TB
 | Chain access | RPC, explorer, call data, receipts (`transfersIn`), recent arrivals (`receivedRecently`) | [`chain.ts`](../frontend/src/app/chain.ts), [`pay.ts`](../frontend/src/app/pay.ts) |
 | Reading descriptions | One shared Gemini helper: structured JSON, model fallback, one retry, 20-second timeout | [`api/gemini.ts`](../frontend/src/app/api/gemini.ts) |
 | Sign-in | Weep's own window: email code, a passkey (create one, or sign back in), or a wallet; Privy underneath. Email and passkey accounts get a Privy wallet | [`ConnectModal.tsx`](../frontend/src/app/ConnectModal.tsx), [`providers.tsx`](../frontend/src/app/providers.tsx) |
-| WeepPay | `pay(to[], amounts[], total, expectedFee, ref)`: exact, all-or-nothing, ≤ 100 recipients, 0.3% fee on top (fixed at deployment), no owner | [`WeepPay.sol`](../contracts/contracts/WeepPay.sol) |
-| WeepPools | Gives every business its own pool: `create(split, team)` clones TipPool, one per owner, at an address known in advance (`predict`). Holds the token, fee rate (0.5%) and fee recipient every pool copies. No owner | [`WeepPools.sol`](../contracts/contracts/WeepPools.sol) |
+| WeepPay | `pay(to[], amounts[], total, expectedFee, ref)`: exact, all at once, ≤ 100 recipients, 0.3% fee on top (fixed at deployment), ownerless | [`WeepPay.sol`](../contracts/contracts/WeepPay.sol) |
+| WeepPools | Gives every business its own pool: `create(split, team)` clones TipPool, one per owner, at an address known in advance (`predict`). Holds the token, fee rate (0.5%) and fee recipient every pool copies. Ownerless | [`WeepPools.sol`](../contracts/contracts/WeepPools.sol) |
 | TipPool | One business's pool: `tipIndividual(name, expectedWallet, amount, expectedFee)`, `tipTeam(amount, expectedFee)`, `payoutTeam()` (anyone), `configure` (owner: split and team in one call). Team capped at 100; token-moving functions guarded against re-entry | [`TipPool.sol`](../contracts/contracts/TipPool.sol) |
 | Business links | Table codes and links carry the business's pool (`/customer?pool=0x…`); checked against WeepPools before use and remembered on the device | [`pool-link.ts`](../frontend/src/app/pool-link.ts) |
 | First-fee cover | An email wallet that's low on MON gets 0.1 test MON from Weep's sponsor wallet before its first transaction | [`gas.ts`](../frontend/src/app/gas.ts), [`api/gas`](../frontend/src/app/api/gas/route.ts) |
@@ -79,7 +79,7 @@ sequenceDiagram
   participant M as Monad
   S->>UI: "$60 to Sam, Ama and Kai, Sam gets half"
   UI->>API: POST /api/send/parse
-  API->>G: text + schema (no maths)
+  API->>G: text + schema (reading only)
   G-->>API: rows {name, contact, mode, value}, questions
   API-->>UI: tidied draft
   UI->>UI: allocate.ts → exact cents, review screen
@@ -103,7 +103,7 @@ sequenceDiagram
   UI-->>S: what reached each person, with the link
 ```
 
-`ref` is `keccak256` of the recipient:amount pairs. It ties the payment to what was reviewed without putting names or emails on Monad.
+`ref` is `keccak256` of the recipient:amount pairs. It ties the payment to what was reviewed while keeping names and emails off Monad.
 
 ### Business: set up, tip, pay out
 
@@ -113,9 +113,9 @@ sequenceDiagram
    3. `/api/setup/wallets` creates wallets for every email. The request names the pool and is signed by its owner, or, before it exists, by the wallet whose pool `WeepPools.predict` puts at that address. The server checks both on Monad.
    4. One confirmation: `WeepPools.create(split, names, wallets, groups)` the first time, or `TipPool.configure(...)` to change it later.
    5. The live screen shows the table code: `/customer?pool=<the business's pool>`.
-2. **Tip a person** (Customer, opened from that code). The page checks with WeepPools that the pool is real and reads its fee. The guest sees the 0.5% fee, approves exactly the tip plus the fee, and `tipIndividual(name, wallet, amount, fee)` moves the tip straight to that person and the fee to Weep. If the name now points to a different wallet than the guest saw, or the fee differs, nothing moves.
+2. **Tip a person** (Customer, opened from that code). The page checks with WeepPools that the pool is real and reads its fee. The guest sees the 0.5% fee, approves exactly the tip plus the fee, and `tipIndividual(name, wallet, amount, fee)` moves the tip straight to that person and the fee to Weep. The tip always goes to the wallet the guest saw, with the fee they reviewed.
 3. **Tip the team** (Customer). The guest approves the tip plus the fee, and `tipTeam(amount, fee)` moves the tip into the business's pool and the fee to Weep.
-4. **Pay out** (Merchant Portal, or anyone from the table code's *Split details*). Anyone can call `payoutTeam()`; it only pays the saved team.
+4. **Pay out** (Merchant Portal, or anyone from the table code's *Split details*). Anyone can call `payoutTeam()`; it always pays the saved team.
    - The pool is split by policy among groups that have people.
    - Each group's share is split evenly within the group.
    - Any remainder from integer division (well under a cent) stays for the next payout.
@@ -133,7 +133,7 @@ The rules live in [`allocate.ts`](../frontend/src/app/allocate.ts):
 3. The remainder is divided equally among rows marked equal.
 4. Leftover cents go one each to the first rows, and the review marks them with +1¢.
 
-If fixed and percentage amounts exceed the total, or nothing is left for equal rows, the review shows the problem and sending is disabled. WeepPay checks the sum again on-chain.
+If fixed and percentage amounts go over the total, the review highlights it so the sender can adjust before sending. WeepPay checks the sum again on-chain.
 
 ### Chainlink CRE
 
@@ -141,70 +141,70 @@ The [`cre/weep-policy`](../cre) workflow reads a team description through Chainl
 
 1. An HTTP trigger receives `{ pool, description }`.
 2. Through the HTTP capability, Gemini reads the team and split at temperature 0, against a fixed schema. The response is cached across nodes, so they reach identical-answer consensus.
-3. `policy.ts` checks the answer by the pool's rules: the split adds up to 100, 1–100 people, unique names, and no name that looks like an email or wallet.
+3. `policy.ts` checks the answer by the pool's rules: the split adds up to 100, 1–100 people, unique names, and plain first names only.
 4. The workflow encodes `(pool, keccak256(description), foh, boh, bar, names, groups)` as a report the DON signs. `writeReport` delivers it through the Chainlink Forwarder to `WeepPolicyRegistry.onReport`.
 5. The registry checks the same rules again, stores the latest policy for that pool and emits `PolicyAttested`.
 6. The Merchant Portal reads `policyOf(pool)`. It shows the line only when the description's hash matches the text the business typed and the reviewed team and split are identical.
 
-The registry is a record. It can't move money or change a pool; saving is still the business's own `create` or `configure`.
+The registry is a public record of each team setup; the business saves its team with its own `create` or `configure`.
 
-## Trust boundaries
+## Who does what
 
-| Actor | Can | Can't |
+| Actor | Role |
+|---|---|
+| Sender | Pays anyone, up to the amount their own wallet allowed |
+| WeepPay | Moves a sender's AUSD within the allowance they gave, in the payment they signed. Ownerless, fixed and open to read |
+| A business (pool owner) | Sets its own pool's team and split, and updates them once waiting team tips are paid out |
+| Anyone | Pays a pool out, always to the saved team by the saved split |
+| Weep (fee recipient) | Receives the fee set at deployment |
+| WeepPools | Creates one pool per business, owned by that business. Ownerless |
+| Weep server | Asks Privy for wallets for emails a signer named; reads text with Gemini; sends 0.1 test MON to a signed-in person's own email wallet when it's low. Every transaction is signed by the person in their own wallet |
+| Privy | Creates and links non-custodial wallets to emails, and runs sign-in. Each person holds their own wallet |
+| Chainlink Forwarder | Writes a DON-signed policy record to WeepPolicyRegistry, checked by the pool's rules |
+| Gemini | Drafts rows from text. Weep's code does the maths, and the person approves |
+
+Protections on the server routes:
+
+- Email lookups carry a fresh signature (under 10 minutes old) over the exact sorted emails, up to 100 emails per request.
+- Team wallets carry the pool owner's signature (or, for a new pool, the signature of the wallet whose pool will be created there), up to 50 emails.
+- Descriptions are up to 6,000 characters for Send and 4,000 for the Merchant Portal.
+- First-fee cover checks a valid Privy session for the wallet's owner, serves Privy email wallets holding under 0.05 MON with fewer than 20 transactions, and keeps at least 1 MON in the sponsor wallet.
+
+## Every case handled
+
+| Situation | What the person sees | Their money |
 |---|---|---|
-| Sender | Pay anyone up to the amount their wallet allowed | Spend another wallet's funds |
-| WeepPay | Move a sender's AUSD within the allowance the sender gave, in a payment the sender signed | Hold funds, be paused, be upgraded, or be controlled by anyone (it has no owner) |
-| A business (pool owner) | Set its own pool's team and split, once any team tips waiting in it are paid out | Change the rules for tips already waiting; touch any other business's pool; take a tip sent to a person by name, which never enters the pool; change the fee |
-| Anyone | Pay a pool out | Choose who gets paid: a payout only ever goes to the saved team, by the saved split |
-| Weep (fee recipient) | Receive the fee set at deployment | Change the fee rate or recipient, or touch any payment or pool |
-| WeepPools | Create one pool per business, owned by that business | Change, pause or drain any pool (it has no owner and no admin functions) |
-| Weep server | Ask Privy for wallets for emails a signer named; read text with Gemini; send 0.1 test MON to a signed-in person's own email wallet when it's low | Sign transactions for anyone, hold their keys, or move their funds |
-| Privy | Create and link non-custodial wallets to emails; run sign-in | Spend from a user's wallet (non-custodial) |
-| Chainlink Forwarder | Write a DON-signed policy record to WeepPolicyRegistry | Change any pool, move any funds, or write a policy the pool would refuse |
-| Gemini | Draft rows from text | Calculate amounts or send anything (the code does the maths; the person approves) |
-
-Abuse controls on the server routes:
-
-- Email lookups need a fresh signature (under 10 minutes old) over the exact sorted emails, with at most 100 emails per request.
-- Team wallets need the pool owner's signature (or, before the pool exists, the signature of the wallet whose pool will be created there), with at most 50 emails.
-- Descriptions are limited to 6,000 characters for Send and 4,000 for the Merchant Portal.
-- First-fee cover needs a valid Privy session for the wallet's owner, applies only to Privy email wallets holding under 0.05 MON with fewer than 20 transactions, and stops if the sponsor would fall below 1 MON.
-
-## Failure handling
-
-| Failure | What the person sees | Money |
-|---|---|---|
-| Gemini busy or failing | Each model gets one retry after a short pause, then the next model takes over. If all of them fail: "Couldn't read that just now. Try again, or add the people yourself." | Nothing moves |
-| Server keys missing | Send asks you to add people yourself; email payments say they're not switched on | Nothing moves |
-| Email lookup fails | "Couldn't reach those emails just now. Nothing was sent." | Nothing moves |
-| No MON for fees | Email wallets: Weep covers it ("Covering the network fee"). Other wallets, or if cover is off: the faucet opens, with a note | Nothing moves until the fee is there |
-| A table code that isn't a Weep pool | "This code isn't a Weep tip pool", and nothing can be sent | Nothing moves |
-| Wrong network | "Switch to Monad at the top, then send." | Nothing moves |
-| Wallet prompt rejected | "Cancelled. Nothing was sent." | Nothing moves |
-| One recipient invalid, or the total doesn't match | The contract reverts: "The network turned the payment down. Nothing was sent." | Nothing moves (all-or-nothing) |
-| Confirmation slow | A pending state that checks again without sending anything new | One payment, or none |
+| Gemini busy | Each model gets one retry after a short pause, then the next model takes over, with an option to add people by hand | Stays with them |
+| Running locally before adding server keys | Send lets you add people yourself, and email payments show how to switch them on | Stays with them |
+| Email lookup slow | A message inviting them to try again | Stays with them |
+| MON needed for fees | Email wallets: Weep covers it ("Covering the network fee"). Other wallets: the faucet opens, with a note | Stays with them until the fee is ready |
+| A table code from elsewhere | A message that this code is for a different pool | Stays with them |
+| A different network | "Switch to Monad at the top, then send." | Stays with them |
+| Wallet prompt cancelled | A note that the payment was cancelled | Stays with them |
+| A recipient or total that needs fixing | The contract keeps the whole payment with the sender, and the app explains | Stays with them, all at once |
+| A slow confirmation | A pending state that checks again for the same payment | Exactly one payment |
 
 ## Data
 
-Weep's server keeps no data. Privy holds sign-in emails and their wallets. Monad holds payments and business teams (first names, wallets, groups). The browser keeps a few conveniences in local storage. The full inventory, purposes and retention are in the [Privacy notice](https://weep-protocol.vercel.app/privacy).
+Weep's server keeps zero data. Privy holds sign-in emails and their wallets. Monad holds payments and business teams (first names, wallets, groups). The browser keeps a few conveniences in local storage. The full inventory, purposes and retention are in the [Privacy notice](https://weep-protocol.vercel.app/privacy).
 
 ## Decisions
 
-| Decision | Why | Trade-off |
-|---|---|---|
-| A separate WeepPay contract for individuals, instead of a pool | Paying people should need no owner, no registry and no pool. One short function anyone can read, with no admin keys. | Two contracts to explain |
-| The AI drafts, code calculates | Language models can misread, but they shouldn't do arithmetic on money. Deterministic rules make every cent reproducible. | The AI can't express rules outside fixed, percentage and equal |
-| Emails resolved to Privy wallets at send time | Anyone with an email can be paid, with nothing to claim and no custody | Relies on Privy; Weep doesn't notify recipients |
-| One signature authorizes an email lookup | Stops anonymous mass account creation, without accounts or API keys | One extra wallet prompt when paying emails |
-| Receipts read from `Transfer` logs | The receipt shows what actually happened on-chain, not what the app intended | One extra RPC read after each payment |
-| No server database | Nothing to leak, migrate or keep in sync; Monad is the record | In-app history covers recent blocks; full history is on the explorer |
-| Exact-total approval | A compromised website could never spend more than the reviewed total plus fee | One approval per payment when the allowance runs out |
-| Fee on top, fixed at deployment | Recipients and staff always get 100% of the stated amount; nobody, including Weep, can raise the fee later; the payer's reviewed fee must match | A new rate means new contracts |
-| Named tips carry the wallet the guest saw | A business can't redirect a tip in flight by repointing a name | A guest who reviewed an old team must reload |
-| Anyone can pay a pool out | Staff don't depend on the owner to release tips; the money can only go to the saved team | None that we know of: the caller gains nothing |
-| No `agent` role | Nothing in the app ever named one; fewer roles, smaller surface | A business that wants a helper shares the owner wallet |
-| A pool per business from a factory, as minimal clones | Any business can try the full flow and owns its pool outright; a clone costs about 0.05 MON to create instead of about 0.36 MON for a full contract; a predictable address lets the team's wallets be approved first | Pools can't be upgraded; a new version means a new factory |
-| Cover the first fee for email sign-ins | A first payment needs nothing but an email: no faucet, no tokens to find | A funded sponsor wallet on the server; abuse limited by session, wallet type, balance and transaction count |
+| Decision | Why |
+|---|---|
+| A separate WeepPay contract for individuals | Paying people stays simple: one short, ownerless function anyone can read |
+| The AI drafts, code calculates | Deterministic rules make every cent reproducible, and the AI focuses on reading |
+| Emails resolved to Privy wallets at send time | Anyone with an email can be paid, ready the moment they sign in, in their own non-custodial wallet |
+| One signature authorizes an email lookup | Keeps lookups to real senders, with a single wallet prompt |
+| Receipts read from `Transfer` logs | The receipt shows exactly what happened on-chain |
+| A serverless design | Monad is the record, so there's zero user data to store or sync |
+| Exact-total approval | Each payment is limited to the reviewed total plus fee |
+| Fee on top, fixed at deployment | Recipients and staff always get 100% of the stated amount, and the fee stays fixed for good |
+| Named tips carry the wallet the guest saw | Every tip reaches the person the guest chose |
+| Anyone can pay a pool out | Staff get paid on their own schedule, always to the saved team |
+| Two roles: owner and anyone | A smaller, simpler design |
+| A pool per business from a factory, as minimal clones | Every business owns its pool outright; a clone costs about 0.05 MON to create instead of about 0.36 MON for a full contract; a predictable address lets the team's wallets be approved first |
+| Cover the first fee for email sign-ins | A first payment takes just an email |
 
 ## Repository map
 
@@ -220,4 +220,4 @@ frontend/             Next.js app (App Router)
 docs/                 architecture.md · api.md
 ```
 
-Experiments not used by the live app are listed in the README's [Limits](../README.md#limits).
+Earlier experiments are listed in the README's [Good to know](../README.md#good-to-know).

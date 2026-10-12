@@ -11,11 +11,11 @@ flowchart LR
   R -.->|"read"| M["Merchant Portal<br/>review card"]
 ```
 
-## What it records, and what it can't do
+## What it records
 
-- **What's recorded:** the split between floor, kitchen and bar, each person's first name and group, and a hash of the description. Emails and wallets are never part of a report. The workflow refuses any name that looks like one.
-- **No power.** [WeepPolicyRegistry](../contracts/contracts/WeepPolicyRegistry.sol) is a record only. It holds no money and can't change any pool. The business still reviews the proposal and saves it to its own pool with its own wallet.
-- **Only the Forwarder writes.** The registry accepts reports only from the Chainlink Forwarder set when it was deployed. It refuses anything the pool would refuse: a split that isn't 100%, more than 100 people, or an unknown group.
+- **What's recorded:** the split between floor, kitchen and bar, each person's first name and group, and a hash of the description. Emails and wallets stay off-chain: the workflow accepts only plain first names.
+- **A public record.** [WeepPolicyRegistry](../contracts/contracts/WeepPolicyRegistry.sol) stores the attested setup for anyone to read. The business stays in control: it reviews the proposal and saves it to its own pool with its own wallet.
+- **Only the Forwarder writes.** The registry accepts reports only from the Chainlink Forwarder set when it was deployed. It applies the pool's own rules: a split of exactly 100%, 1 to 100 people, and the known groups.
 - **Names are public.** First names in a report are stored on Monad, which anyone can read.
 
 ## Files
@@ -24,10 +24,10 @@ flowchart LR
 |---|---|
 | [`weep-policy/main.ts`](weep-policy/main.ts) | The workflow: HTTP trigger, Gemini call through the HTTP capability with identical-answer consensus, report, write to Monad |
 | [`weep-policy/policy.ts`](weep-policy/policy.ts) | The prompt, the answer's fixed schema, and the checks that turn an answer into a policy |
-| [`weep-policy/policy.test.ts`](weep-policy/policy.test.ts) | Tests for those checks (`npm test`, no CRE account needed) |
+| [`weep-policy/policy.test.ts`](weep-policy/policy.test.ts) | Tests for those checks (`npm test`, runs locally) |
 | [`weep-policy/config.staging.json`](weep-policy/config.staging.json) | Chain (`monad-testnet`), registry address, gas limit, Gemini model |
 | [`weep-policy/payload.example.json`](weep-policy/payload.example.json) | An example request: a pool address and a description |
-| [`project.yaml`](project.yaml), [`secrets.yaml`](secrets.yaml), [`.env.example`](.env.example) | CLI settings: the Monad RPC, and the names of the secrets (never their values) |
+| [`project.yaml`](project.yaml), [`secrets.yaml`](secrets.yaml), [`.env.example`](.env.example) | CLI settings: the Monad RPC, and the names of the secrets (values stay in your local `.env`) |
 
 ## Run it
 
@@ -55,6 +55,14 @@ You need a CRE account (free, at [cre.chain.link](https://cre.chain.link)), [Bun
 
 The workflow uses Gemini 3.5 Flash-Lite with minimal thinking. CRE stops any HTTP request after 10 seconds. In our tests Flash-Lite answered in 1–2 seconds, while 3.5 Flash with default thinking took up to 34.
 
+**Run on camera, 12 October 2026:** the same workflow read the example in about 2 seconds and wrote [this transaction](https://testnet.monadexplorer.com/tx/0x6524ac00c9493f7f0ac2364ba4fec3b32ec90bbc953c8b96ebfafbffdd6fee75), which is Success, method "Report", sent to Chainlink's forwarder.
+
+| Status | |
+|---|---|
+| Workflow built with the CRE TypeScript SDK; Gemini through the HTTP capability with consensus; DON-style signed report | Done |
+| Run with `cre workflow simulate --broadcast`, writing real Monad testnet transactions through Chainlink's MockKeystoneForwarder | Done, twice (9 and 12 Oct) |
+| Deployed to a live Chainlink DON, writing through the production KeystoneForwarder | Next step: requested through `cre account access` |
+
 The simulation runs on your computer. The Gemini call is real, and the transaction is a real one on Monad testnet. Deploying the workflow to the Chainlink network itself needs approval from Chainlink (`cre account access`). It also needs a registry that trusts the production KeystoneForwarder, and `authorizedKeys` set on the HTTP trigger.
 
 ## Forwarders on Monad testnet
@@ -64,4 +72,4 @@ The simulation runs on your computer. The Gemini call is real, and the transacti
 | Simulation (`--broadcast`) | `0xB9F79d863261869B234c481D1f9A7af84AeAd192` (MockKeystoneForwarder) |
 | Deployed workflows | `0xF8344CFd5c43616a4366C34E3EEE75af79a74482` (KeystoneForwarder) |
 
-Deploy the registry for either with [`contracts/scripts/deploy-policy-registry.js`](../contracts/scripts/deploy-policy-registry.js). Without `FORWARDER` set, it uses the simulation one.
+Deploy the registry for either with [`contracts/scripts/deploy-policy-registry.js`](../contracts/scripts/deploy-policy-registry.js). By default it uses the simulation forwarder; set `FORWARDER` for the production one.
