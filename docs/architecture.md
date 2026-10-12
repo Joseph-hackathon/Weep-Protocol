@@ -220,4 +220,4 @@ frontend/             Next.js app (App Router)
 docs/                 architecture.md · api.md
 ```
 
-Experiments not used by the live app are listed in the README's [Limits](../README.md#limits).
+Experiments not used by the live app are listed in the README's [Good to know](../README.md#good-to-know).

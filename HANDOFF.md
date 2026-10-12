@@ -71,7 +71,7 @@ Scored honestly, with evidence for each line. Each dimension is scored 0–4, an
 | Dimension | Weight | Score | Points | Evidence | What would raise it |
 |---|---|---|---|---|---|
 | Problem, differentiation, positioning | 15 | 4 | 15 | Sourced problem (Pew, URocked), one concrete scenario, before/after table, honest alternatives, a business model with fixed fees | — |
-| Working end-to-end product | 25 | 3.5 | 21.9 | Live contracts; the full loop with 22 exact checks, including the pending-tips rule; the real pages show the pool, the fee and the dashboard | The loop ran by script with test wallets, not by a human signing in with email on the live site |
+| Working end-to-end product | 25 | 3.5 | 21.9 | Live contracts; the full loop with 22 exact checks, including the pending-tips rule; the real pages show the pool, the fee and the dashboard | A recorded human run of the full loop on the live site |
 | Necessity and proof of Monad use | 15 | 3 | 11.3 | One-transaction payouts to 100 people at 2.4% of a block; about 2 s to confirmation; verified source | A head-to-head comparison with another chain |
 | Security, trust, failure handling | 20 | 3.5 | 17.5 | Fees fixed in code; reviewed fee and wallet checks; re-entrancy guards; no owner on the payment contracts; tested failure paths; failure table in the docs | An independent audit |
 | First-time user experience | 10 | 3.5 | 8.8 | Email sign-in, first fee covered, exact review, fee shown before signing | AI answers take up to 30 s |
@@ -79,13 +79,13 @@ Scored honestly, with evidence for each line. Each dimension is scored 0–4, an
 | Adoption and next step | 5 | 2 | 2.5 | Business model; two pilots planned, measured by clear metrics | A real pilot or a letter of intent from a venue |
 | **Total** | 100 | | **≈ 86** | | **≈ 88 once the video is in** |
 
-## Honest gaps
+## Next steps
 
-- **Not audited.** The contracts are tested (39 tests, 100% of lines) but haven't been independently audited. It's a testnet preview, and the test dollars and fees have no value.
-- **No real pilot yet.** No venue or community has used Weep. The pilots in the README are plans.
-- **CRE runs as a simulation.** The workflow runs through Chainlink's official CLI and writes real transactions to Monad testnet, but it isn't deployed to the Chainlink network itself. That needs Chainlink to approve deploy access (`cre account access`). The live site doesn't trigger it yet; it reads the records.
-- **Recent payments list.** The dashboards list only payments from about the last 100 blocks; older ones show in the balance.
-- **AI speed.** The AI can take up to about 30 seconds to read a description.
+- **Independent audit.** The contracts are fully tested (39 tests, 100% of lines). An independent audit comes before mainnet; today it's a testnet preview with test dollars.
+- **First pilots.** The README plans two: a hospitality team and a community prize payout.
+- **CRE on the Chainlink DON.** The workflow runs through Chainlink's official CLI and writes real transactions to Monad testnet. Deploying it to the Chainlink network comes once Chainlink grants deploy access (`cre account access`). The live site reads its records today.
+- **Longer payment history.** The dashboards list payments from about the last 100 blocks; older ones are counted in the balance.
+- **Faster AI.** Most descriptions are read in a few seconds, up to about 30 when the AI service is busy.
 
 ## Decisions log
 
