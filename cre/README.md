@@ -55,6 +55,14 @@ You need a CRE account (free, at [cre.chain.link](https://cre.chain.link)), [Bun
 
 The workflow uses Gemini 3.5 Flash-Lite with minimal thinking. CRE stops any HTTP request after 10 seconds. In our tests Flash-Lite answered in 1–2 seconds, while 3.5 Flash with default thinking took up to 34.
 
+**Run on camera, 12 October 2026:** the same workflow read the example in about 2 seconds and wrote [this transaction](https://testnet.monadexplorer.com/tx/0x6524ac00c9493f7f0ac2364ba4fec3b32ec90bbc953c8b96ebfafbffdd6fee75), which is Success, method "Report", sent to Chainlink's forwarder.
+
+| Status | |
+|---|---|
+| Workflow built with the CRE TypeScript SDK; Gemini through the HTTP capability with consensus; DON-style signed report | Done |
+| Run with `cre workflow simulate --broadcast`, writing real Monad testnet transactions through Chainlink's MockKeystoneForwarder | Done, twice (9 and 12 Oct) |
+| Deployed to a live Chainlink DON, writing through the production KeystoneForwarder | Not yet: needs Chainlink's approval (`cre account access`) |
+
 The simulation runs on your computer. The Gemini call is real, and the transaction is a real one on Monad testnet. Deploying the workflow to the Chainlink network itself needs approval from Chainlink (`cre account access`). It also needs a registry that trusts the production KeystoneForwarder, and `authorizedKeys` set on the HTTP trigger.
 
 ## Forwarders on Monad testnet
